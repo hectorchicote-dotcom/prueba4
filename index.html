@@ -23,6 +23,8 @@ if ('serviceWorker' in navigator) {
 <helmet>
 <link rel="stylesheet" href="ds-styles.css">
 <script src="ds-bundle.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
 <style>
 :root {
@@ -71,6 +73,10 @@ if ('serviceWorker' in navigator) {
       <sc-if value="{{ headerSubtitle }}" hint-placeholder-val="{{ true }}">
         <div style="font-size:13px;color:var(--color-neutral-600);margin-top:2px">{{ headerSubtitle }}</div>
       </sc-if>
+      <div style="display:flex;align-items:center;gap:5px;margin-top:3px">
+        <span style="width:7px;height:7px;border-radius:999px;background:{{ cloudDotColor }}"></span>
+        <span style="font-size:11px;color:var(--color-neutral-600)">{{ cloudLabel }}</span>
+      </div>
     </div>
     <sc-if value="{{ headerCalendarVisible }}" hint-placeholder-val="{{ false }}">
       <button onClick="{{ openCalendar }}" style="width:36px;height:36px;border-radius:999px;border:none;background:var(--color-surface);color:var(--color-text);display:flex;align-items:center;justify-content:center;flex:none;cursor:pointer">
@@ -146,7 +152,10 @@ if ('serviceWorker' in navigator) {
                     </div>
                   </div>
                   <div class="card-title">Turno de {{ turno.period }}</div>
-                  <div class="card-meta"><span>{{ turno.totalCount }} alumnos</span></div>
+                  <div class="card-meta"><span>{{ turno.cupoLabel }}</span></div>
+                  <sc-if value="{{ turno.hasEsperaBadge }}" hint-placeholder-val="{{ false }}">
+                    <span class="tag" style="background:var(--color-accent-2-300);color:var(--color-accent-2-800);align-self:flex-start;margin-top:6px">{{ turno.esperaCount }} en espera</span>
+                  </sc-if>
                   <sc-if value="{{ turno.isEmpty }}" hint-placeholder-val="{{ false }}">
                     <span class="tag" style="background:var(--color-accent-300);color:var(--color-accent-900);align-self:flex-start;margin-top:6px">Sin alumnos</span>
                   </sc-if>
@@ -356,6 +365,18 @@ if ('serviceWorker' in navigator) {
         <sc-if value="{{ hasSelectedDia }}" hint-placeholder-val="{{ true }}">
           <button class="btn btn-secondary btn-block" onClick="{{ marcarTodosPresentes }}">Marcar todos presentes</button>
         </sc-if>
+        <button class="btn btn-secondary btn-block" onClick="{{ currentTurno.onAvisar }}">Avisar al turno por WhatsApp</button>
+        <sc-if value="{{ hasAvisoLinks }}" hint-placeholder-val="{{ false }}">
+          <div class="card" style="background:var(--color-accent-2-100);gap:8px">
+            <div style="font-size:12px;color:var(--color-neutral-700)">Toca cada alumno para enviarle el aviso.</div>
+            <sc-for list="{{ avisoLinks }}" as="a" hint-placeholder-count="3">
+              <a href="{{ a.href }}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--color-bg);border-radius:var(--radius-md);font-size:13px">
+                <span>{{ a.name }}</span><span style="color:var(--color-accent-700)">Enviar →</span>
+              </a>
+            </sc-for>
+            <button class="btn btn-ghost" style="font-size:12px" onClick="{{ cerrarAviso }}">Cerrar</button>
+          </div>
+        </sc-if>
         <sc-if value="{{ hasClassDays }}" hint-placeholder-val="{{ false }}">
           <div>
             <div style="font-size:12px;color:var(--color-neutral-600);margin-bottom:6px">Elegí el día de clase</div>
@@ -393,6 +414,17 @@ if ('serviceWorker' in navigator) {
         <sc-if value="{{ hasNoDia }}" hint-placeholder-val="{{ false }}">
           <div style="text-align:center;padding:30px 20px;color:var(--color-neutral-600);font-size:14px">No hay días de clase disponibles este mes.</div>
         </sc-if>
+        <sc-if value="{{ hasEspera }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <h6 style="margin:0;color:var(--color-neutral-600)">Lista de espera</h6>
+            <sc-for list="{{ esperaList }}" as="e" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--color-surface);border-radius:var(--radius-md)">
+                <span style="font-size:13px">{{ e.name }}</span>
+                <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px" onClick="{{ e.onAdmitir }}">Dar plaza</button>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
         <button class="btn btn-primary btn-block" onClick="{{ goBack }}">Listo</button>
       </div>
     </sc-if>
@@ -406,11 +438,18 @@ if ('serviceWorker' in navigator) {
             <span class="tag" style="background:{{ currentStudent.grupoBg }};color:{{ currentStudent.grupoColor }}">{{ currentStudent.grupoLabel }}</span>
             <sc-if value="{{ currentStudent.showAge }}" hint-placeholder-val="{{ true }}"><span style="font-size:13px;color:var(--color-neutral-600)">{{ currentStudent.age }} años</span></sc-if>
           </div>
-          <div style="display:flex;gap:8px;margin-top:4px">
+          <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;justify-content:center">
             <button class="btn btn-secondary" style="font-size:12px" onClick="{{ currentStudent.onEditar }}">Editar datos</button>
             <button class="btn btn-secondary" style="font-size:12px" onClick="{{ currentStudent.onTransferir }}">Cambiar turno</button>
+            <button class="btn btn-secondary" style="font-size:12px" onClick="{{ currentStudent.onToggleActivo }}">{{ currentStudent.activoLabel }}</button>
             <button class="btn btn-ghost" style="font-size:12px;color:var(--color-accent-700)" onClick="{{ currentStudent.onEliminar }}">Eliminar alumno</button>
           </div>
+          <sc-if value="{{ currentStudent.esBaja }}" hint-placeholder-val="{{ false }}">
+            <span class="tag" style="background:var(--color-neutral-300);color:var(--color-neutral-800)">Dado de baja</span>
+          </sc-if>
+          <sc-if value="{{ currentStudent.enEspera }}" hint-placeholder-val="{{ false }}">
+            <span class="tag" style="background:var(--color-accent-2-300);color:var(--color-accent-2-800)">En lista de espera</span>
+          </sc-if>
         </div>
 
         <div class="card" style="background:var(--color-surface);flex-direction:row;align-items:center;justify-content:space-between">
@@ -420,6 +459,21 @@ if ('serviceWorker' in navigator) {
           </div>
           <a href="{{ currentStudent.telHref }}" class="btn btn-secondary" style="font-size:12px">Llamar</a>
         </div>
+
+        <sc-if value="{{ currentStudent.hasFicha }}" hint-placeholder-val="{{ false }}">
+          <div class="card" style="background:var(--color-surface);gap:10px">
+            <h6 style="margin:0;color:var(--color-neutral-600)">Ficha</h6>
+            <sc-if value="{{ currentStudent.hasNivel }}" hint-placeholder-val="{{ false }}">
+              <div><span style="font-size:12px;color:var(--color-neutral-600)">Nivel: </span><span style="font-size:14px">{{ currentStudent.nivel }}</span></div>
+            </sc-if>
+            <sc-if value="{{ currentStudent.hasEmergencia }}" hint-placeholder-val="{{ false }}">
+              <div><span style="font-size:12px;color:var(--color-neutral-600)">Emergencia: </span><span style="font-size:14px">{{ currentStudent.emergencia }}</span></div>
+            </sc-if>
+            <sc-if value="{{ currentStudent.hasNotas }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:14px;white-space:pre-wrap">{{ currentStudent.notas }}</div>
+            </sc-if>
+          </div>
+        </sc-if>
 
         <div>
           <h6 style="margin:0 0 10px;color:var(--color-neutral-600)">Asistencia</h6>
@@ -600,6 +654,10 @@ if ('serviceWorker' in navigator) {
             <input class="input" type="text" placeholder="17:30" value="{{ turnoForm.end }}" onChange="{{ onTurnoEndChange }}">
           </div>
         </div>
+        <div class="field">
+          <label>Cupo máximo (0 = sin límite)</label>
+          <input class="input" type="number" placeholder="0" value="{{ turnoForm.cupo }}" onChange="{{ onTurnoCupoChange }}">
+        </div>
         <div class="dialog-actions" style="justify-content:space-between">
           <sc-if value="{{ turnoForm.isEditing }}" hint-placeholder-val="{{ false }}">
             <button class="btn btn-ghost" style="color:var(--color-accent-700)" onClick="{{ deleteTurno }}">Eliminar</button>
@@ -679,6 +737,18 @@ if ('serviceWorker' in navigator) {
         <div class="field">
           <label>Teléfono</label>
           <input class="input" type="text" value="{{ alumnoForm.phone }}" onChange="{{ onAlumnoPhoneChange }}">
+        </div>
+        <div class="field">
+          <label>Nivel</label>
+          <input class="input" type="text" placeholder="Iniciación, medio, avanzado…" value="{{ alumnoForm.nivel }}" onChange="{{ onAlumnoNivelChange }}">
+        </div>
+        <div class="field">
+          <label>Contacto de emergencia</label>
+          <input class="input" type="text" placeholder="Nombre y teléfono" value="{{ alumnoForm.emergencia }}" onChange="{{ onAlumnoEmergenciaChange }}">
+        </div>
+        <div class="field">
+          <label>Notas (alergias, observaciones)</label>
+          <textarea class="input" rows="3" style="resize:vertical;font-family:inherit" value="{{ alumnoForm.notas }}" onChange="{{ onAlumnoNotasChange }}"></textarea>
         </div>
         <div class="dialog-actions" style="justify-content:space-between">
           <sc-if value="{{ alumnoForm.isEditing }}" hint-placeholder-val="{{ false }}">
@@ -765,6 +835,15 @@ const COURSE_BOUNDS = {
   'niños': { start: '2026-07-01', end: '2027-06-30' },
 };
 const STORAGE_KEY = 'arte-chromo-academia-datos-v1';
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyA-TpD2VQGouvH1eYiPriMq1LCKQG9YCss",
+  authDomain: "arte-chromo-e3327.firebaseapp.com",
+  databaseURL: "https://arte-chromo-e3327-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "arte-chromo-e3327",
+  storageBucket: "arte-chromo-e3327.firebasestorage.app",
+  messagingSenderId: "1079061109125",
+  appId: "1:1079061109125:web:1c384f40d3cad29fcb0cec"
+};
 const DIA_NUM = { 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6, 'Domingo': 0 };
 function pad2(n) { return String(n).padStart(2, '0'); }
 function classDaysForTurnoInMonth(t, mesLabel, closedDates) {
@@ -854,6 +933,8 @@ class Component extends DCLogic {
     selectedMesPerfil: DEFAULT_MES,
     estadisticasScope: 'mes',
     morososExpanded: false,
+    avisoTurno: null,
+    cloudOnline: false,
     recordatoriosListaExpanded: false,
     pagoForm: { mes: DEFAULT_MES, monto: 0, metodo: 'efectivo' },
     turnos: DEFAULT_TURNOS,
@@ -862,6 +943,8 @@ class Component extends DCLogic {
     alumnoForm: null,
     transferForm: null,
   };
+
+  _clientId = 'c' + Math.random().toString(36).slice(2, 10);
 
   componentDidMount() {
     try {
@@ -877,13 +960,46 @@ class Component extends DCLogic {
     window.addEventListener('pagehide', this._onHide);
     window.addEventListener('visibilitychange', this._onHide);
     window.addEventListener('beforeunload', this._onHide);
+    this.initCloud();
   }
+
+  initCloud = () => {
+    const tryInit = () => {
+      if (!window.firebase || !window.firebase.database) return false;
+      try {
+        if (!window.firebase.apps.length) window.firebase.initializeApp(FIREBASE_CONFIG);
+        this._dbRef = window.firebase.database().ref('academia');
+        this._dbRef.on('value', (snap) => {
+          const remote = snap.val();
+          if (!remote || !remote.json) return;
+          if (remote.origen === this._clientId) return;
+          if (remote.json === this._lastSaved) return;
+          try {
+            const data = JSON.parse(remote.json);
+            this._lastSaved = remote.json;
+            this._skipNextPush = true;
+            this.setState(data);
+          } catch (e) {}
+        });
+        window.firebase.database().ref('.info/connected').on('value', (s) => {
+          this.setState({ cloudOnline: !!s.val() });
+        });
+        this._cloudReady = true;
+        return true;
+      } catch (e) { return false; }
+    };
+    if (!tryInit()) {
+      let tries = 0;
+      const iv = setInterval(() => { if (tryInit() || ++tries > 40) clearInterval(iv); }, 250);
+    }
+  };
 
   componentWillUnmount() {
     clearInterval(this._persistTimer);
     window.removeEventListener('pagehide', this._onHide);
     window.removeEventListener('visibilitychange', this._onHide);
     window.removeEventListener('beforeunload', this._onHide);
+    if (this._dbRef) this._dbRef.off();
     this.persist();
   }
 
@@ -894,7 +1010,12 @@ class Component extends DCLogic {
     persisted.forEach(k => { toSave[k] = this.state[k]; });
     const json = JSON.stringify(toSave);
     if (json === this._lastSaved) return;
-    try { localStorage.setItem(STORAGE_KEY, json); this._lastSaved = json; } catch (e) {}
+    try { localStorage.setItem(STORAGE_KEY, json); } catch (e) {}
+    this._lastSaved = json;
+    if (this._skipNextPush) { this._skipNextPush = false; return; }
+    if (this._cloudReady && this._dbRef) {
+      this._dbRef.set({ json, origen: this._clientId, ts: Date.now() }).catch(() => {});
+    }
   };
 
   componentDidUpdate(prevProps, prevState) {
@@ -903,7 +1024,8 @@ class Component extends DCLogic {
 
   getStudent = (id) => this.state.students.find(s => s.id === id);
   getTurno = (id) => this.state.turnos.find(t => t.id === id);
-  getStudentsForTurno = (turnoId) => this.state.students.filter(s => s.turnoId === turnoId);
+  getStudentsForTurno = (turnoId) => this.state.students.filter(s => s.turnoId === turnoId && s.activo !== false && !s.enEspera);
+  getWaitlist = (turnoId) => this.state.students.filter(s => s.turnoId === turnoId && s.activo !== false && s.enEspera);
   getGrupo = (student) => student.grupo || (this.getTurno(student.turnoId) || {}).grupo || 'niños';
   montoFor = (student) => student.customMonto != null ? student.customMonto : CUOTAS[this.getGrupo(student)];
   getPagoEstado = (student, mes) => {
@@ -992,21 +1114,22 @@ class Component extends DCLogic {
   setMetodoBizum = () => this.setState(s => ({ pagoForm: { ...s.pagoForm, metodo: 'bizum' } }));
   setMetodoTpv = () => this.setState(s => ({ pagoForm: { ...s.pagoForm, metodo: 'tpv' } }));
 
-  openNewTurno = () => this.setState({ sheet: { type: 'turno' }, turnoForm: { id: null, day: 'Lunes', grupo: 'niños', start: '', end: '' } });
-  openEditTurno = (t) => this.setState({ sheet: { type: 'turno' }, turnoForm: { id: t.id, day: t.day, grupo: t.grupo, start: t.start, end: t.end } });
+  openNewTurno = () => this.setState({ sheet: { type: 'turno' }, turnoForm: { id: null, day: 'Lunes', grupo: 'niños', start: '', end: '', cupo: '' } });
+  openEditTurno = (t) => this.setState({ sheet: { type: 'turno' }, turnoForm: { id: t.id, day: t.day, grupo: t.grupo, start: t.start, end: t.end, cupo: t.cupo || '' } });
   onTurnoDayChange = (e) => { const v = e.target.value; this.setState(s => ({ turnoForm: { ...s.turnoForm, day: v } })); };
   onTurnoGrupoChange = (e) => { const v = e.target.value; this.setState(s => ({ turnoForm: { ...s.turnoForm, grupo: v } })); };
   onTurnoStartChange = (e) => { const v = e.target.value; this.setState(s => ({ turnoForm: { ...s.turnoForm, start: v } })); };
   onTurnoEndChange = (e) => { const v = e.target.value; this.setState(s => ({ turnoForm: { ...s.turnoForm, end: v } })); };
+  onTurnoCupoChange = (e) => { const v = e.target.value; this.setState(s => ({ turnoForm: { ...s.turnoForm, cupo: v } })); };
   saveTurno = () => {
     const f = this.state.turnoForm;
     if (!f) return;
     this.setState(s => {
       if (f.id) {
-        return { turnos: s.turnos.map(t => t.id === f.id ? { ...t, day: f.day, grupo: f.grupo, start: f.start, end: f.end } : t), sheet: null };
+        return { turnos: s.turnos.map(t => t.id === f.id ? { ...t, day: f.day, grupo: f.grupo, start: f.start, end: f.end, cupo: Number(f.cupo) || 0 } : t), sheet: null };
       }
       const id = 't' + Date.now();
-      return { turnos: [...s.turnos, { id, day: f.day, grupo: f.grupo, start: f.start || '00:00', end: f.end || '00:00' }], sheet: null };
+      return { turnos: [...s.turnos, { id, day: f.day, grupo: f.grupo, start: f.start || '00:00', end: f.end || '00:00', cupo: Number(f.cupo) || 0 }], sheet: null };
     });
   };
   deleteTurno = () => {
@@ -1023,9 +1146,9 @@ class Component extends DCLogic {
   openNewAlumno = () => {
     const firstTurno = this.state.turnos[0];
     const grupo = firstTurno ? firstTurno.grupo : 'niños';
-    this.setState({ sheet: { type: 'alumno' }, alumnoForm: { id: null, name: '', age: '', grupo, turnoId: firstTurno ? firstTurno.id : '', phone: '', monto: CUOTAS[grupo], fechaInicio: '2026-07-28' } });
+    this.setState({ sheet: { type: 'alumno' }, alumnoForm: { id: null, name: '', age: '', grupo, turnoId: firstTurno ? firstTurno.id : '', phone: '', monto: CUOTAS[grupo], fechaInicio: '2026-07-28', nivel: '', emergencia: '', notas: '' } });
   };
-  openEditAlumno = (s) => this.setState({ sheet: { type: 'alumno' }, alumnoForm: { id: s.id, name: s.name, age: s.age, grupo: this.getGrupo(s), turnoId: s.turnoId || '', phone: s.phone, monto: this.montoFor(s), fechaInicio: s.fechaInicio || '' } });
+  openEditAlumno = (s) => this.setState({ sheet: { type: 'alumno' }, alumnoForm: { id: s.id, name: s.name, age: s.age, grupo: this.getGrupo(s), turnoId: s.turnoId || '', phone: s.phone, monto: this.montoFor(s), fechaInicio: s.fechaInicio || '', nivel: s.nivel || '', emergencia: s.emergencia || '', notas: s.notas || '' } });
   onAlumnoNameChange = (e) => { const v = e.target.value; this.setState(s => ({ alumnoForm: { ...s.alumnoForm, name: v } })); };
   onAlumnoAgeChange = (e) => { const v = e.target.value; this.setState(s => ({ alumnoForm: { ...s.alumnoForm, age: v } })); };
   onAlumnoGrupoChange = (e) => { const v = e.target.value; this.setState(s => ({ alumnoForm: { ...s.alumnoForm, grupo: v, monto: CUOTAS[v] } })); };
@@ -1033,15 +1156,29 @@ class Component extends DCLogic {
   onAlumnoPhoneChange = (e) => { const v = e.target.value; this.setState(s => ({ alumnoForm: { ...s.alumnoForm, phone: v } })); };
   onAlumnoMontoChange = (e) => { const v = e.target.value; this.setState(s => ({ alumnoForm: { ...s.alumnoForm, monto: v } })); };
   onAlumnoFechaInicioChange = (e) => { const v = e.target.value; this.setState(s => ({ alumnoForm: { ...s.alumnoForm, fechaInicio: v } })); };
+  onAlumnoNivelChange = (e) => { const v = e.target.value; this.setState(s => ({ alumnoForm: { ...s.alumnoForm, nivel: v } })); };
+  onAlumnoEmergenciaChange = (e) => { const v = e.target.value; this.setState(s => ({ alumnoForm: { ...s.alumnoForm, emergencia: v } })); };
+  onAlumnoNotasChange = (e) => { const v = e.target.value; this.setState(s => ({ alumnoForm: { ...s.alumnoForm, notas: v } })); };
+  toggleActivo = (id) => this.setState(s => ({ students: s.students.map(st => st.id === id ? { ...st, activo: st.activo === false } : st) }));
+  togglePlaza = (id) => this.setState(s => ({ students: s.students.map(st => st.id === id ? { ...st, enEspera: !st.enEspera } : st) }));
+  avisarTurno = (t) => {
+    const texto = window.prompt('Mensaje para todo el turno:', `Hola, os escribimos de Arte Chromo sobre la clase de ${t.day} ${t.start}–${t.end}: `);
+    if (!texto) return;
+    this.setState({ avisoTurno: { turnoId: t.id, texto } });
+  };
+  cerrarAviso = () => this.setState({ avisoTurno: null });
   saveAlumno = () => {
     const f = this.state.alumnoForm;
     if (!f || !f.name.trim()) return;
     this.setState(s => {
       if (f.id) {
-        return { students: s.students.map(st => st.id === f.id ? { ...st, name: f.name, age: Number(f.age) || st.age, grupo: f.grupo, turnoId: f.turnoId, phone: f.phone, customMonto: Number(f.monto) || 0, fechaInicio: f.fechaInicio } : st), sheet: null };
+        return { students: s.students.map(st => st.id === f.id ? { ...st, name: f.name, age: Number(f.age) || st.age, grupo: f.grupo, turnoId: f.turnoId, phone: f.phone, customMonto: Number(f.monto) || 0, fechaInicio: f.fechaInicio, nivel: f.nivel, emergencia: f.emergencia, notas: f.notas } : st), sheet: null };
       }
       const id = 's' + Date.now();
-      return { students: [...s.students, { id, name: f.name, age: Number(f.age) || 0, grupo: f.grupo, turnoId: f.turnoId, phone: f.phone, pagoEstado: 'pendiente', customMonto: Number(f.monto) || 0, fechaInicio: f.fechaInicio }], sheet: null };
+      const t = s.turnos.find(x => x.id === f.turnoId);
+      const ocupadas = t ? s.students.filter(x => x.turnoId === t.id && x.activo !== false && !x.enEspera).length : 0;
+      const enEspera = !!(t && t.cupo > 0 && ocupadas >= t.cupo);
+      return { students: [...s.students, { id, name: f.name, age: Number(f.age) || 0, grupo: f.grupo, turnoId: f.turnoId, phone: f.phone, pagoEstado: 'pendiente', customMonto: Number(f.monto) || 0, fechaInicio: f.fechaInicio, nivel: f.nivel, emergencia: f.emergencia, notas: f.notas, activo: true, enEspera }], sheet: null };
     });
   };
   deleteAlumno = (idArg) => {
@@ -1128,6 +1265,9 @@ class Component extends DCLogic {
       grupoBg: gs.bg,
       grupoColor: gs.color,
       totalCount,
+      cupoLabel: t.cupo > 0 ? `${totalCount}/${t.cupo} plazas` : `${totalCount} alumnos`,
+      esperaCount: this.getWaitlist(t.id).length,
+      hasEsperaBadge: this.getWaitlist(t.id).length > 0,
       statusLabel: taken ? `${presentCount}/${totalCount} presentes` : (markedCount > 0 ? `${markedCount}/${totalCount} marcados` : 'Sin tomar asistencia'),
       statusColor: taken ? 'var(--color-accent-2-800)' : 'var(--color-neutral-600)',
       onOpen: () => this.openAttendance(t.id),
@@ -1137,7 +1277,8 @@ class Component extends DCLogic {
   renderVals() {
     const st = this.state;
     const turnos = st.turnos;
-    const students = st.students;
+    const allStudents = st.students;
+    const students = st.students.filter(s => s.activo !== false);
     const view = st.view;
     const viewType = view ? view.type : null;
     const isAttendance = viewType === 'attendance';
@@ -1186,6 +1327,7 @@ class Component extends DCLogic {
       { key: 'niños', label: 'Niños' },
       { key: 'adolescentes', label: 'Adolescentes' },
       { key: 'adultos', label: 'Adultos' },
+      { key: 'bajas', label: 'Bajas' },
     ];
     const filterChips = filterDefs.map(f => {
       const active = st.groupFilter === f.key;
@@ -1198,8 +1340,9 @@ class Component extends DCLogic {
     });
 
     const q = st.searchQuery.trim().toLowerCase();
-    const filteredStudents = students
-      .filter(s => st.groupFilter === 'todos' || this.getGrupo(s) === st.groupFilter)
+    const baseAlumnos = st.groupFilter === 'bajas' ? allStudents.filter(s => s.activo === false) : students;
+    const filteredStudents = baseAlumnos
+      .filter(s => st.groupFilter === 'todos' || st.groupFilter === 'bajas' || this.getGrupo(s) === st.groupFilter)
       .filter(s => !q || s.name.toLowerCase().includes(q))
       .map(s => {
         const t = this.getTurno(s.turnoId);
@@ -1273,8 +1416,8 @@ class Component extends DCLogic {
       if (gStudents.length) {
         if (isEstadisticasMes) {
           pct = Math.round(gStudents.reduce((sum, s) => {
-            const idx = students.findIndex(x => x.id === s.id);
-            const p = ASSIST_PATTERNS[idx % 4];
+            const idx = allStudents.findIndex(x => x.id === s.id);
+            const p = ASSIST_PATTERNS[((idx % 4) + 4) % 4] || ASSIST_PATTERNS[0];
             return sum + (p.presentes / p.total) * 100;
           }, 0) / gStudents.length);
         } else {
@@ -1304,6 +1447,7 @@ class Component extends DCLogic {
     const alumnosTotal = students.length;
 
     let currentTurno = null;
+    let esperaList = [], hasEspera = false, avisoLinks = [], hasAvisoLinks = false;
     if (isAttendance) {
       const t = this.getTurno(view.id);
       const mes = view.mes || DEFAULT_MES;
@@ -1341,7 +1485,18 @@ class Component extends DCLogic {
         students: enriched,
         classDaysThisMonth,
         hasSelectedDia: !!selectedDia,
+        onAvisar: () => this.avisarTurno(t),
       };
+      const espera = this.getWaitlist(t.id);
+      esperaList = espera.map(s => ({ id: s.id, name: s.name, onAdmitir: () => this.togglePlaza(s.id) }));
+      hasEspera = espera.length > 0;
+      if (st.avisoTurno && st.avisoTurno.turnoId === t.id) {
+        avisoLinks = this.getStudentsForTurno(t.id).map(s => ({
+          name: s.name,
+          href: `https://wa.me/${(s.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(st.avisoTurno.texto)}`,
+        }));
+        hasAvisoLinks = avisoLinks.length > 0;
+      }
     }
 
     let currentStudent = null;
@@ -1352,8 +1507,8 @@ class Component extends DCLogic {
       const gs = GRUPO_STYLE[grupo];
       const estado = this.getPagoEstado(s);
       const ps = PAGO_STYLE[estado];
-      const idx = students.findIndex(x => x.id === s.id);
-      const pattern = ASSIST_PATTERNS[idx % 4];
+      const idx = allStudents.findIndex(x => x.id === s.id);
+      const pattern = ASSIST_PATTERNS[((idx % 4) + 4) % 4] || ASSIST_PATTERNS[0];
       const dotColors = { presente: 'var(--color-accent-2-600)', justificada: 'var(--color-accent-500)', ausente: 'var(--color-neutral-400)' };
       currentStudent = {
         id: s.id, name: s.name, age: s.age, initials: initials(s.name),
@@ -1370,6 +1525,13 @@ class Component extends DCLogic {
         onEditar: () => this.openEditAlumno(s),
         onEliminar: () => this.deleteAlumno(s.id),
         onTransferir: () => this.openTransferir(s),
+        onToggleActivo: () => this.toggleActivo(s.id),
+        activoLabel: s.activo === false ? 'Reactivar' : 'Dar de baja',
+        esBaja: s.activo === false,
+        enEspera: !!s.enEspera,
+        nivel: s.nivel || '', emergencia: s.emergencia || '', notas: s.notas || '',
+        hasNivel: !!s.nivel, hasEmergencia: !!s.emergencia, hasNotas: !!s.notas,
+        hasFicha: !!(s.nivel || s.emergencia || s.notas),
         showRecordatorio: estado === 'pendiente' || estado === 'atrasado',
         recordatorioHref: this.buildRecordatorio(s),
       };
@@ -1409,6 +1571,8 @@ class Component extends DCLogic {
     else if (isCurso) { headerTitle = 'Curso'; headerSubtitle = 'Selección del curso escolar'; }
 
     const tabActiveColor = 'var(--color-accent-700)', tabActiveBg = 'var(--color-accent-100)';
+    const cloudDotColor = st.cloudOnline ? 'var(--color-accent-2-600)' : 'var(--color-neutral-400)';
+    const cloudLabel = st.cloudOnline ? 'Sincronizado' : 'Sin conexión — se guardará al volver';
     const tabIdleColor = 'var(--color-neutral-500)', tabIdleBg = 'transparent';
 
     const sheetType = st.sheet ? st.sheet.type : null;
@@ -1495,6 +1659,10 @@ class Component extends DCLogic {
       setMetodoBizum: this.setMetodoBizum, setMetodoTpv: this.setMetodoTpv,
       closeSheet: () => this.setState({ sheet: null }), confirmPago: this.confirmPago,
       marcarTodosPresentes: this.marcarTodosPresentes,
+      esperaList, hasEspera, avisoLinks, hasAvisoLinks, cerrarAviso: this.cerrarAviso,
+      cloudDotColor, cloudLabel,
+      onTurnoCupoChange: this.onTurnoCupoChange,
+      onAlumnoNivelChange: this.onAlumnoNivelChange, onAlumnoEmergenciaChange: this.onAlumnoEmergenciaChange, onAlumnoNotasChange: this.onAlumnoNotasChange,
       sheetOpenTransferir, transferForm: sheetOpenTransferir ? { ...(st.transferForm || { turnoId: '' }), studentName: this.getStudent(st.sheet.studentId).name } : { turnoId: '', studentName: '' }, onTransferTurnoChange: this.onTransferTurnoChange, confirmTransfer: this.confirmTransfer,
       diaOptions, grupoOptions, turnoOptions, hasTurnoOptions, turnoForm, alumnoForm,
       onTurnoDayChange: this.onTurnoDayChange, onTurnoGrupoChange: this.onTurnoGrupoChange,
