@@ -1,0 +1,1695 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#f17c8e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Arte Chromo">
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function(){}); });
+}
+</script>
+<script src="./support.js"></script>
+
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="ds-styles.css">
+<script src="ds-bundle.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<style>
+:root {
+  --color-bg: #faf3ea;
+  --color-surface: #f0e6d8;
+  --color-text: #201e1d;
+  --color-accent: #f17c8e;
+  --color-accent-2: #6dbbde;
+  --color-divider: color-mix(in srgb, #201e1d 16%, transparent);
+
+  --color-accent-100: #feeef0;
+  --color-accent-200: #fcd9de;
+  --color-accent-300: #f8b9c3;
+  --color-accent-400: #f49aa8;
+  --color-accent-500: #f17c8e;
+  --color-accent-600: #d9647a;
+  --color-accent-700: #b14d63;
+  --color-accent-800: #85394a;
+  --color-accent-900: #5a2732;
+
+  --color-accent-2-100: #f1fafd;
+  --color-accent-2-200: #dff3fa;
+  --color-accent-2-300: #c7eaf6;
+  --color-accent-2-400: #9dd5ec;
+  --color-accent-2-500: #6dbbde;
+  --color-accent-2-600: #4a9cc4;
+  --color-accent-2-700: #35789c;
+  --color-accent-2-800: #26576f;
+  --color-accent-2-900: #1a3a49;
+}
+  body{margin:0}
+  a{color:var(--color-accent-700);text-decoration:none}
+  a:hover{color:var(--color-accent-800)}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);max-width:520px;margin:0 auto;position:relative">
+
+  <div style="flex:none;padding:24px 20px 14px;display:flex;align-items:center;gap:10px;position:sticky;top:0;background:var(--color-bg);z-index:2">
+    <sc-if value="{{ showBack }}" hint-placeholder-val="{{ false }}">
+      <button onClick="{{ goBack }}" style="width:36px;height:36px;border-radius:999px;border:none;background:var(--color-surface);display:flex;align-items:center;justify-content:center;flex:none;cursor:pointer;color:var(--color-text)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>
+      </button>
+    </sc-if>
+    <div style="flex:1;min-width:0">
+      <h1 style="font-size:23px;margin:0;line-height:1.15">{{ headerTitle }}</h1>
+      <sc-if value="{{ headerSubtitle }}" hint-placeholder-val="{{ true }}">
+        <div style="font-size:13px;color:var(--color-neutral-600);margin-top:2px">{{ headerSubtitle }}</div>
+      </sc-if>
+      <div style="display:flex;align-items:center;gap:5px;margin-top:3px">
+        <span style="width:7px;height:7px;border-radius:999px;background:{{ cloudDotColor }}"></span>
+        <span style="font-size:11px;color:var(--color-neutral-600)">{{ cloudLabel }}</span>
+      </div>
+    </div>
+    <sc-if value="{{ headerCalendarVisible }}" hint-placeholder-val="{{ false }}">
+      <button onClick="{{ openCalendar }}" style="width:36px;height:36px;border-radius:999px;border:none;background:var(--color-surface);color:var(--color-text);display:flex;align-items:center;justify-content:center;flex:none;cursor:pointer">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 10h18"></path></svg>
+      </button>
+    </sc-if>
+    <sc-if value="{{ headerActionVisible }}" hint-placeholder-val="{{ false }}">
+      <button onClick="{{ headerActionOnClick }}" style="width:36px;height:36px;border-radius:999px;border:none;background:var(--color-accent-700);color:var(--color-bg);display:flex;align-items:center;justify-content:center;flex:none;cursor:pointer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>
+      </button>
+    </sc-if>
+  </div>
+
+  <div style="padding:2px 20px 112px">
+
+    <sc-if value="{{ isHoy }}" hint-placeholder-val="{{ true }}">
+      <div data-screen-label="Hoy">
+        <sc-if value="{{ hasMorosos }}" hint-placeholder-val="{{ false }}">
+          <div class="card" style="background:var(--color-accent-300);margin-bottom:14px;padding:14px;cursor:pointer" onClick="{{ toggleMorosos }}">
+            <div style="font-size:13px;color:var(--color-accent-900)">{{ morosos.length }} alumno(s) con 2+ meses pendientes de pago. {{ morososToggleLabel }}</div>
+            <sc-if value="{{ morososExpanded }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+                <sc-for list="{{ morososList }}" as="m" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--color-bg);border-radius:var(--radius-md);cursor:pointer" onClick="{{ m.onOpen }}">
+                    <span style="font-size:13px">{{ m.name }}</span>
+                    <span style="font-size:12px;color:var(--color-accent-800)">{{ m.mesesLabel }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ hasTurnosHoy }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <sc-for list="{{ todayTurnos }}" as="turno" hint-placeholder-count="2">
+              <div class="card elev-sm" style="cursor:pointer" onClick="{{ turno.onOpen }}">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="font-size:13px;color:var(--color-neutral-600)">{{ turno.time }}</span>
+                  <span class="tag" style="background:{{ turno.grupoBg }};color:{{ turno.grupoColor }}">{{ turno.grupoLabel }}</span>
+                </div>
+                <div class="card-title">Turno de {{ turno.period }}</div>
+                <div class="card-meta"><span>{{ turno.totalCount }} alumnos</span><span>·</span><span style="color:{{ turno.statusColor }}">{{ turno.statusLabel }}</span></div>
+                <sc-if value="{{ turno.notTaken }}" hint-placeholder-val="{{ false }}">
+                  <span class="tag" style="background:var(--color-accent-700);color:var(--color-bg);align-self:flex-start;margin-top:6px">Falta tomar asistencia</span>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ noTurnosHoy }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;padding:60px 20px;color:var(--color-neutral-600);font-size:14px">No hay turnos programados hoy.</div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isTurnos }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="Turnos" style="display:flex;flex-direction:column;gap:18px">
+        <input class="input" type="text" placeholder="Buscar turno…" value="{{ searchQueryTurnos }}" onChange="{{ onSearchTurnosChange }}">
+        <div style="display:flex;flex-direction:column;gap:22px">
+        <sc-for list="{{ turnosByDay }}" as="grp" hint-placeholder-count="4">
+          <div>
+            <h6 style="margin:0 0 10px;color:var(--color-neutral-600)">{{ grp.day }}</h6>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <sc-for list="{{ grp.items }}" as="turno" hint-placeholder-count="2">
+                <div class="card elev-sm" style="cursor:pointer" onClick="{{ turno.onOpen }}">
+                  <div style="display:flex;align-items:center;justify-content:space-between">
+                    <span style="font-size:13px;color:var(--color-neutral-600)">{{ turno.time }}</span>
+                    <div style="display:flex;align-items:center;gap:6px">
+                      <span class="tag" style="background:{{ turno.grupoBg }};color:{{ turno.grupoColor }}">{{ turno.grupoLabel }}</span>
+                      <button onClick="{{ turno.onEdit }}" style="width:26px;height:26px;border-radius:999px;border:none;background:var(--color-surface);color:var(--color-neutral-600);display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="card-title">Turno de {{ turno.period }}</div>
+                  <div class="card-meta"><span>{{ turno.cupoLabel }}</span></div>
+                  <sc-if value="{{ turno.hasEsperaBadge }}" hint-placeholder-val="{{ false }}">
+                    <span class="tag" style="background:var(--color-accent-2-300);color:var(--color-accent-2-800);align-self:flex-start;margin-top:6px">{{ turno.esperaCount }} en espera</span>
+                  </sc-if>
+                  <sc-if value="{{ turno.isEmpty }}" hint-placeholder-val="{{ false }}">
+                    <span class="tag" style="background:var(--color-accent-300);color:var(--color-accent-900);align-self:flex-start;margin-top:6px">Sin alumnos</span>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isAlumnos }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="Alumnos" style="display:flex;flex-direction:column;gap:14px">
+        <input class="input" type="text" placeholder="Buscar alumno…" value="{{ searchQuery }}" onChange="{{ onSearchChange }}">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <sc-for list="{{ filterChips }}" as="chip" hint-placeholder-count="4">
+            <button onClick="{{ chip.onClick }}" style="border:none;cursor:pointer;font-family:var(--font-body);font-size:13px;padding:7px 14px;border-radius:999px;background:{{ chip.bg }};color:{{ chip.color }}">{{ chip.label }}</button>
+          </sc-for>
+        </div>
+        <sc-if value="{{ hasStudentsResults }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ filteredStudents }}" as="st" hint-placeholder-count="5">
+              <div class="card elev-sm" style="flex-direction:row;align-items:center;gap:12px;cursor:pointer" onClick="{{ st.onOpen }}">
+                <div style="width:40px;height:40px;border-radius:999px;background:{{ st.avatarBg }};color:{{ st.avatarColor }};display:flex;align-items:center;justify-content:center;font-family:var(--font-heading);font-size:13px;flex:none">{{ st.initials }}</div>
+                <div style="flex:1;min-width:0">
+                  <div class="card-title" style="font-size:15px">{{ st.name }}</div>
+                  <div class="card-meta">
+                    <sc-if value="{{ st.showAge }}" hint-placeholder-val="{{ true }}"><span>{{ st.age }} años</span><span>·</span></sc-if>
+                    <span>{{ st.turnoInfo }}</span>
+                  </div>
+                </div>
+                <span class="tag" style="background:{{ st.pagoBg }};color:{{ st.pagoColor }};flex:none">{{ st.pagoLabel }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ noStudentsResults }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;padding:40px 20px;color:var(--color-neutral-600);font-size:14px">Sin resultados.</div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isPagos }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="Pagos" style="display:flex;flex-direction:column;gap:20px">
+        <div style="font-size:12px;color:var(--color-neutral-600)">{{ cursoLabel }}</div>
+        <select class="input" value="{{ selectedMesPagos }}" onChange="{{ onMesPagosChange }}">
+          <sc-for list="{{ mesOptionsPagos }}" as="m" hint-placeholder-count="6">
+            <option value="{{ m.value }}" selected="{{ m.selected }}">{{ m.value }}</option>
+          </sc-for>
+        </select>
+        <sc-if value="{{ hasPendientesTotal }}" hint-placeholder-val="{{ false }}">
+          <button class="btn btn-secondary btn-block" onClick="{{ toggleRecordatoriosLista }}">WhatsApp a pendientes ({{ pendientesTotalCount }})</button>
+          <sc-if value="{{ recordatoriosListaExpanded }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <sc-for list="{{ pendientesTotalList }}" as="p" hint-placeholder-count="3">
+                <a href="{{ p.recordatorioHref }}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--color-surface);border-radius:var(--radius-md);font-size:13px">
+                  <span>{{ p.name }}</span>
+                  <span style="color:var(--color-accent-700)">Enviar →</span>
+                </a>
+              </sc-for>
+            </div>
+          </sc-if>
+        </sc-if>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="card" style="background:var(--color-surface);gap:4px;padding:12px">
+            <div class="card-kicker">Cobrado</div>
+            <div style="font-family:var(--font-heading);font-size:16px">{{ pagosStats.recaudadoLabel }}</div>
+          </div>
+          <div class="card" style="background:var(--color-surface);gap:4px;padding:12px">
+            <div class="card-kicker">Pendientes</div>
+            <div style="font-family:var(--font-heading);font-size:16px">{{ pagosStats.pendientesCount }}</div>
+            <div style="font-size:12px;color:var(--color-neutral-600)">{{ pagosStats.pendienteMontoLabel }} por cobrar</div>
+          </div>
+        </div>
+
+        <sc-if value="{{ hasPagosGrupos }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:22px">
+            <sc-for list="{{ pagosPorGrupo }}" as="grp" hint-placeholder-count="3">
+              <div>
+                <h6 style="margin:0 0 10px;color:var(--color-neutral-600)"><span class="tag" style="background:{{ grp.bg }};color:{{ grp.color }}">{{ grp.label }}</span></h6>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <sc-for list="{{ grp.items }}" as="st" hint-placeholder-count="2">
+                    <div class="card elev-sm" style="flex-direction:row;align-items:center;gap:10px">
+                      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;cursor:pointer" onClick="{{ st.onOpen }}">
+                        <div style="width:36px;height:36px;border-radius:999px;background:{{ st.avatarBg }};color:{{ st.avatarColor }};display:flex;align-items:center;justify-content:center;font-family:var(--font-heading);font-size:12px;flex:none">{{ st.initials }}</div>
+                        <div style="flex:1;min-width:0">
+                          <div class="card-title" style="font-size:14px">{{ st.name }}</div>
+                          <div class="card-meta"><span>{{ st.montoLabel }}</span><span>·</span><span style="color:{{ st.pagoColor }}">{{ st.pagoLabel }}</span></div>
+                        </div>
+                      </div>
+                      <sc-if value="{{ st.showQuickPago }}" hint-placeholder-val="{{ false }}">
+                        <a href="{{ st.recordatorioHref }}" target="_blank" class="btn btn-ghost" style="flex:none;font-size:12px;padding:6px 10px">WhatsApp</a>
+                        <button class="btn btn-secondary" style="flex:none;font-size:12px;padding:6px 12px" onClick="{{ st.onQuickPago }}">Registrar</button>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <div class="card" style="background:var(--color-accent-2-100);align-items:center;text-align:center;padding:16px">
+          <div style="font-family:var(--font-heading);font-size:15px;color:var(--color-accent-2-800)">{{ pagosStats.alDiaCount }} alumnos al día</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isCurso }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="Curso" style="display:flex;flex-direction:column;gap:20px">
+        <select class="input" value="{{ selectedCurso }}" onChange="{{ onCursoChange }}">
+          <sc-for list="{{ cursoOptions }}" as="c" hint-placeholder-count="1">
+            <option value="{{ c }}">{{ c }}</option>
+          </sc-for>
+        </select>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ cursoBoundsList }}" as="cb" hint-placeholder-count="3">
+            <div class="card elev-sm">
+              <span class="tag" style="background:{{ cb.bg }};color:{{ cb.color }};align-self:flex-start">{{ cb.label }}</span>
+              <div class="card-meta" style="margin-top:6px">Del {{ cb.startLabel }} al {{ cb.endLabel }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isReportes }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="Estadísticas" style="display:flex;flex-direction:column;gap:24px;padding-bottom:8px">
+        <div style="font-size:12px;color:var(--color-neutral-600)">{{ cursoLabel }}</div>
+        <div class="card" style="background:var(--color-surface);gap:8px">
+          <div style="font-size:13px;font-weight:600">Copia de seguridad</div>
+          <div style="font-size:12px;color:var(--color-neutral-600)">Los datos se guardan en este dispositivo. Descarga una copia de vez en cuando por si el navegador borra los datos.</div>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <button class="btn btn-secondary" style="font-size:12px;flex:1" onClick="{{ onExportarDatos }}">Descargar copia</button>
+            <label class="btn btn-secondary" style="font-size:12px;flex:1;text-align:center;cursor:pointer">
+              Restaurar copia
+              <input type="file" accept="application/json" onChange="{{ onImportarDatos }}" style="display:none">
+            </label>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <sc-for list="{{ estadisticasScopeChips }}" as="chip" hint-placeholder-count="2">
+            <button onClick="{{ chip.onClick }}" style="border:none;cursor:pointer;font-family:var(--font-body);font-size:13px;padding:7px 14px;border-radius:999px;background:{{ chip.bg }};color:{{ chip.color }}">{{ chip.label }}</button>
+          </sc-for>
+        </div>
+        <sc-if value="{{ isEstadisticasMes }}" hint-placeholder-val="{{ true }}">
+          <select class="input" value="{{ selectedMesEstadisticas }}" onChange="{{ onMesEstadisticasChange }}">
+            <sc-for list="{{ mesOptionsEstadisticas }}" as="m" hint-placeholder-count="6">
+              <option value="{{ m.value }}" selected="{{ m.selected }}">{{ m.value }}</option>
+            </sc-for>
+          </select>
+        </sc-if>
+        <div>
+          <h6 style="margin:0 0 12px;color:var(--color-neutral-600)">Asistencia promedio por grupo</h6>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <sc-for list="{{ asistenciaPorGrupo }}" as="g" hint-placeholder-count="3">
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+                  <span>{{ g.label }}</span><span style="color:var(--color-neutral-600)">{{ g.pctLabel }}</span>
+                </div>
+                <div style="height:8px;border-radius:999px;background:var(--color-surface);overflow:hidden">
+                  <div style="height:100%;border-radius:999px;background:{{ g.barColor }};width:{{ g.barWidth }}"></div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div>
+          <h6 style="margin:0 0 12px;color:var(--color-neutral-600)">Alumnos por grupo</h6>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <sc-for list="{{ alumnosPorGrupo }}" as="g" hint-placeholder-count="3">
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+                  <span>{{ g.label }}</span><span style="color:var(--color-neutral-600)">{{ g.count }}</span>
+                </div>
+                <div style="height:8px;border-radius:999px;background:var(--color-surface);overflow:hidden">
+                  <div style="height:100%;border-radius:999px;background:{{ g.barColor }};width:{{ g.barWidth }}"></div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="card" style="background:var(--color-surface)"><div class="card-kicker">{{ ingresosLabelKicker }}</div><div style="font-family:var(--font-heading);font-size:19px">{{ ingresosMesLabel }}</div></div>
+          <div class="card" style="background:var(--color-surface)"><div class="card-kicker">Alumnos totales</div><div style="font-family:var(--font-heading);font-size:19px">{{ alumnosTotal }}</div></div>
+          <div class="card" style="background:var(--color-surface)"><div class="card-kicker">Pagos pendientes</div><div style="font-family:var(--font-heading);font-size:19px">{{ pagosStats.pendientesCount }}</div></div>
+          <div class="card" style="background:var(--color-surface)"><div class="card-kicker">Total a cobrar</div><div style="font-family:var(--font-heading);font-size:19px">{{ pagosStats.pendienteMontoLabel }}</div></div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isAttendance }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="Asistencia" style="display:flex;flex-direction:column;gap:16px">
+        <div class="card" style="background:var(--color-surface);flex-direction:row;align-items:center;justify-content:space-between">
+          <div>
+            <div class="card-title" style="font-size:15px">{{ currentTurno.grupoLabel }} · Turno de {{ currentTurno.period }}</div>
+            <div class="card-meta">{{ currentTurno.day }} · {{ currentTurno.time }}</div>
+          </div>
+          <div style="font-family:var(--font-heading);font-size:20px;color:var(--color-accent-700)">{{ currentTurno.presentCount }}/{{ currentTurno.totalCount }}</div>
+        </div>
+        <select class="input" value="{{ currentTurno.mes }}" onChange="{{ onMesAsistenciaChange }}">
+          <sc-for list="{{ mesOptionsAsistencia }}" as="m" hint-placeholder-count="6">
+            <option value="{{ m.value }}" selected="{{ m.selected }}">{{ m.value }}</option>
+          </sc-for>
+        </select>
+        <sc-if value="{{ hasSelectedDia }}" hint-placeholder-val="{{ true }}">
+          <button class="btn btn-secondary btn-block" onClick="{{ marcarTodosPresentes }}">Marcar todos presentes</button>
+        </sc-if>
+        <button class="btn btn-secondary btn-block" onClick="{{ currentTurno.onAvisar }}">Avisar al turno por WhatsApp</button>
+        <sc-if value="{{ hasAvisoLinks }}" hint-placeholder-val="{{ false }}">
+          <div class="card" style="background:var(--color-accent-2-100);gap:8px">
+            <div style="font-size:12px;color:var(--color-neutral-700)">Toca cada alumno para enviarle el aviso.</div>
+            <sc-for list="{{ avisoLinks }}" as="a" hint-placeholder-count="3">
+              <a href="{{ a.href }}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--color-bg);border-radius:var(--radius-md);font-size:13px">
+                <span>{{ a.name }}</span><span style="color:var(--color-accent-700)">Enviar →</span>
+              </a>
+            </sc-for>
+            <button class="btn btn-ghost" style="font-size:12px" onClick="{{ cerrarAviso }}">Cerrar</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ hasClassDays }}" hint-placeholder-val="{{ false }}">
+          <div>
+            <div style="font-size:12px;color:var(--color-neutral-600);margin-bottom:6px">Elegí el día de clase</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <sc-for list="{{ classDaysThisMonth }}" as="cd" hint-placeholder-count="4">
+                <button onClick="{{ cd.onClick }}" style="border:none;cursor:pointer;font-family:var(--font-body);font-size:13px;padding:6px 12px;border-radius:999px;background:{{ cd.bg }};color:{{ cd.color }}">{{ cd.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ hasSelectedDia }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ currentTurno.students }}" as="st" hint-placeholder-count="5">
+              <div class="card elev-sm" style="flex-direction:row;align-items:center;gap:10px">
+                <div style="width:36px;height:36px;border-radius:999px;background:{{ st.avatarBg }};color:{{ st.avatarColor }};display:flex;align-items:center;justify-content:center;font-family:var(--font-heading);font-size:12px;flex:none">{{ st.initials }}</div>
+                <div style="flex:1;min-width:0">
+                  <div class="card-title" style="font-size:14px">{{ st.name }}</div>
+                  <sc-if value="{{ st.showAge }}" hint-placeholder-val="{{ true }}"><div class="card-meta">{{ st.age }} años</div></sc-if>
+              </div>
+              <div style="display:flex;gap:6px;flex:none">
+                <button onClick="{{ st.onPresente }}" style="width:32px;height:32px;border-radius:999px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;background:{{ st.presenteBg }};color:{{ st.presenteColor }}">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg>
+                </button>
+                <button onClick="{{ st.onJustificada }}" style="width:32px;height:32px;border-radius:999px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;background:{{ st.justificadaBg }};color:{{ st.justificadaColor }}">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"></path><rect x="3" y="4" width="18" height="16" rx="2"></rect></svg>
+                </button>
+                <button onClick="{{ st.onAusente }}" style="width:32px;height:32px;border-radius:999px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;background:{{ st.ausenteBg }};color:{{ st.ausenteColor }}">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5l14 14M19 5L5 19"></path></svg>
+                </button>
+              </div>
+            </div>
+          </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ hasNoDia }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center;padding:30px 20px;color:var(--color-neutral-600);font-size:14px">No hay días de clase disponibles este mes.</div>
+        </sc-if>
+        <sc-if value="{{ hasEspera }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <h6 style="margin:0;color:var(--color-neutral-600)">Lista de espera</h6>
+            <sc-for list="{{ esperaList }}" as="e" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--color-surface);border-radius:var(--radius-md)">
+                <span style="font-size:13px">{{ e.name }}</span>
+                <button class="btn btn-secondary" style="font-size:12px;padding:6px 12px" onClick="{{ e.onAdmitir }}">Dar plaza</button>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <button class="btn btn-primary btn-block" onClick="{{ goBack }}">Listo</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isProfile }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="Perfil alumno" style="display:flex;flex-direction:column;gap:20px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:6px 0 4px">
+          <div style="width:72px;height:72px;border-radius:999px;background:{{ currentStudent.avatarBg }};color:{{ currentStudent.avatarColor }};display:flex;align-items:center;justify-content:center;font-family:var(--font-heading);font-size:23px">{{ currentStudent.initials }}</div>
+          <div style="font-family:var(--font-heading);font-size:19px;text-align:center">{{ currentStudent.name }}</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="tag" style="background:{{ currentStudent.grupoBg }};color:{{ currentStudent.grupoColor }}">{{ currentStudent.grupoLabel }}</span>
+            <sc-if value="{{ currentStudent.showAge }}" hint-placeholder-val="{{ true }}"><span style="font-size:13px;color:var(--color-neutral-600)">{{ currentStudent.age }} años</span></sc-if>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;justify-content:center">
+            <button class="btn btn-secondary" style="font-size:12px" onClick="{{ currentStudent.onEditar }}">Editar datos</button>
+            <button class="btn btn-secondary" style="font-size:12px" onClick="{{ currentStudent.onTransferir }}">Cambiar turno</button>
+            <button class="btn btn-secondary" style="font-size:12px" onClick="{{ currentStudent.onToggleActivo }}">{{ currentStudent.activoLabel }}</button>
+            <button class="btn btn-ghost" style="font-size:12px;color:var(--color-accent-700)" onClick="{{ currentStudent.onEliminar }}">Eliminar alumno</button>
+          </div>
+          <sc-if value="{{ currentStudent.esBaja }}" hint-placeholder-val="{{ false }}">
+            <span class="tag" style="background:var(--color-neutral-300);color:var(--color-neutral-800)">Dado de baja</span>
+          </sc-if>
+          <sc-if value="{{ currentStudent.enEspera }}" hint-placeholder-val="{{ false }}">
+            <span class="tag" style="background:var(--color-accent-2-300);color:var(--color-accent-2-800)">En lista de espera</span>
+          </sc-if>
+        </div>
+
+        <div class="card" style="background:var(--color-surface);flex-direction:row;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-size:12px;color:var(--color-neutral-600)">Turno</div>
+            <div style="font-size:14px">{{ currentStudent.turnoInfo }}</div>
+          </div>
+          <a href="{{ currentStudent.telHref }}" class="btn btn-secondary" style="font-size:12px">Llamar</a>
+        </div>
+
+        <sc-if value="{{ currentStudent.hasFicha }}" hint-placeholder-val="{{ false }}">
+          <div class="card" style="background:var(--color-surface);gap:10px">
+            <h6 style="margin:0;color:var(--color-neutral-600)">Ficha</h6>
+            <sc-if value="{{ currentStudent.hasNivel }}" hint-placeholder-val="{{ false }}">
+              <div><span style="font-size:12px;color:var(--color-neutral-600)">Nivel: </span><span style="font-size:14px">{{ currentStudent.nivel }}</span></div>
+            </sc-if>
+            <sc-if value="{{ currentStudent.hasEmergencia }}" hint-placeholder-val="{{ false }}">
+              <div><span style="font-size:12px;color:var(--color-neutral-600)">Emergencia: </span><span style="font-size:14px">{{ currentStudent.emergencia }}</span></div>
+            </sc-if>
+            <sc-if value="{{ currentStudent.hasNotas }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:14px;white-space:pre-wrap">{{ currentStudent.notas }}</div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <div>
+          <h6 style="margin:0 0 10px;color:var(--color-neutral-600)">Asistencia</h6>
+          <div style="font-size:12px;color:var(--color-neutral-600);margin-bottom:6px">{{ cursoLabel }}</div>
+          <select class="input" value="{{ selectedMesPerfil }}" onChange="{{ onMesAlumnosChange }}">
+            <sc-for list="{{ mesOptionsPerfil }}" as="m" hint-placeholder-count="6">
+              <option value="{{ m.value }}" selected="{{ m.selected }}">{{ m.value }}</option>
+            </sc-for>
+          </select>
+          <div class="card" style="background:var(--color-surface);flex-direction:row;align-items:center;justify-content:space-between;margin-top:10px">
+            <span style="font-size:13px;color:var(--color-neutral-600)">Clases a las que asistió</span>
+            <span style="font-family:var(--font-heading);font-size:18px;color:var(--color-accent-700)">{{ currentStudent.asistResumen }}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">
+            <sc-for list="{{ currentStudent.diasAsistencia }}" as="da" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--color-surface);border-radius:var(--radius-md)">
+                <span style="font-size:13px">{{ da.label }}</span>
+                <div style="display:flex;gap:6px">
+                  <button onClick="{{ da.onPresente }}" style="width:28px;height:28px;border-radius:999px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;background:{{ da.presenteBg }};color:{{ da.presenteColor }}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"></path></svg>
+                  </button>
+                  <button onClick="{{ da.onJustificada }}" style="width:28px;height:28px;border-radius:999px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;background:{{ da.justificadaBg }};color:{{ da.justificadaColor }}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"></path><rect x="3" y="4" width="18" height="16" rx="2"></rect></svg>
+                  </button>
+                  <button onClick="{{ da.onAusente }}" style="width:28px;height:28px;border-radius:999px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;background:{{ da.ausenteBg }};color:{{ da.ausenteColor }}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5l14 14M19 5L5 19"></path></svg>
+                  </button>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <h6 style="margin:0;color:var(--color-neutral-600)">Pagos</h6>
+            <span class="tag" style="background:{{ currentStudent.pagoBg }};color:{{ currentStudent.pagoColor }}">{{ currentStudent.pagoLabel }}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+            <sc-for list="{{ currentStudent.historial }}" as="h" hint-placeholder-count="2">
+              <div style="display:flex;justify-content:space-between;font-size:13px;padding:10px 12px;background:var(--color-surface);border-radius:var(--radius-md)">
+                <span>{{ h.mes }} · {{ h.metodo }}</span>
+                <span style="font-family:var(--font-heading)">{{ h.montoLabel }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <button class="btn btn-primary btn-block" onClick="{{ currentStudent.onRegistrarPago }}">Registrar pago</button>
+          <sc-if value="{{ currentStudent.showRecordatorio }}" hint-placeholder-val="{{ false }}">
+            <a href="{{ currentStudent.recordatorioHref }}" target="_blank" class="btn btn-secondary btn-block" style="margin-top:8px">Enviar recordatorio por WhatsApp</a>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isCalendar }}" hint-placeholder-val="{{ false }}">
+      <div data-screen-label="Calendario" style="display:flex;flex-direction:column;gap:16px">
+        <div style="font-size:12px;color:var(--color-neutral-600)">{{ cursoLabel }}</div>
+        <select class="input" value="{{ selectedMesCalendario }}" onChange="{{ onMesCalendarioChange }}">
+          <sc-for list="{{ mesOptionsCalendario }}" as="m" hint-placeholder-count="6">
+            <option value="{{ m.value }}" selected="{{ m.selected }}">{{ m.value }}</option>
+          </sc-for>
+        </select>
+        <div style="font-size:13px;color:var(--color-neutral-600)">Tocá un día para marcarlo como cierre de la academia. {{ closedCountLabel }}</div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;font-size:11px;color:var(--color-neutral-600);text-align:center">
+          <span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">
+          <sc-for list="{{ calendarCells }}" as="c" hint-placeholder-count="35">
+            <button onClick="{{ c.onClick }}" style="aspect-ratio:1;border:none;border-radius:var(--radius-md);cursor:{{ c.cursor }};background:{{ c.bg }};color:{{ c.color }};font-family:var(--font-body);font-size:13px;visibility:{{ c.visibility }}">{{ c.label }}</button>
+          </sc-for>
+        </div>
+        <div>
+          <h6 style="margin:0 0 10px;color:var(--color-neutral-600)">Clases este mes por turno</h6>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ clasesPorTurnoMes }}" as="t" hint-placeholder-count="6">
+              <div class="card" style="background:var(--color-surface);flex-direction:row;align-items:center;justify-content:space-between;padding:12px 14px;gap:10px">
+                <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+                  <span class="tag" style="background:{{ t.bg }};color:{{ t.color }};align-self:flex-start">{{ t.grupoLabel }}</span>
+                  <span style="font-size:12px;color:var(--color-neutral-600)">{{ t.day }} · {{ t.time }}</span>
+                </div>
+                <span style="font-family:var(--font-heading);font-size:16px;flex:none">{{ t.count }} clases</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" onClick="{{ goBack }}">Listo</button>
+      </div>
+    </sc-if>
+
+  </div>
+
+  <sc-if value="{{ isTabView }}" hint-placeholder-val="{{ true }}">
+    <div style="position:fixed;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;display:flex;justify-content:space-around;align-items:center;padding:8px 6px 22px;background:color-mix(in srgb, var(--color-bg) 90%, transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--color-divider);z-index:5">
+      <button onClick="{{ goHoy }}" style="border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 12px;border-radius:999px;color:{{ tabHoyColor }};background:{{ tabHoyBg }}">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9v11h14V9"></path></svg>
+        <span style="font-size:10px">Hoy</span>
+      </button>
+      <button onClick="{{ goTurnos }}" style="border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 12px;border-radius:999px;color:{{ tabTurnosColor }};background:{{ tabTurnosBg }}">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 10h18"></path></svg>
+        <span style="font-size:10px">Turnos</span>
+      </button>
+      <button onClick="{{ goAlumnos }}" style="border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 12px;border-radius:999px;color:{{ tabAlumnosColor }};background:{{ tabAlumnosBg }}">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"></circle><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"></path><circle cx="17" cy="9" r="2.6"></circle><path d="M15.7 14.2c2.7.5 4.3 2.4 4.3 5.3"></path></svg>
+        <span style="font-size:10px">Alumnos</span>
+      </button>
+      <button onClick="{{ goPagos }}" style="border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 12px;border-radius:999px;color:{{ tabPagosColor }};background:{{ tabPagosBg }}">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2.5"></rect><path d="M16 12.5h2.5"></path><path d="M3 9.5h18"></path></svg>
+        <span style="font-size:10px">Pagos</span>
+      </button>
+      <button onClick="{{ goReportes }}" style="border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 12px;border-radius:999px;color:{{ tabReportesColor }};background:{{ tabReportesBg }}">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"></path></svg>
+        <span style="font-size:10px">Estadísticas</span>
+      </button>
+      <button onClick="{{ goCurso }}" style="border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 12px;border-radius:999px;color:{{ tabCursoColor }};background:{{ tabCursoBg }}">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M8 2v4M16 2v4M3 10h18"></path><path d="M8 15l2.5 2.5L16 12"></path></svg>
+        <span style="font-size:10px">Curso</span>
+      </button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ sheetOpenPago }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:color-mix(in srgb, var(--color-neutral-900) 55%, transparent);z-index:30">
+      <div class="dialog" style="width:100%">
+        <div class="dialog-title">Registrar pago</div>
+        <div class="dialog-body" style="opacity:1;margin:-6px 0 4px">{{ sheetStudentName }}</div>
+        <div class="field">
+          <label>Mes</label>
+          <input class="input" type="text" value="{{ pagoMes }}" onChange="{{ onPagoMesChange }}">
+        </div>
+        <div class="field">
+          <label>Monto</label>
+          <input class="input" type="number" value="{{ pagoMonto }}" onChange="{{ onPagoMontoChange }}">
+        </div>
+        <div class="field">
+          <label>Método</label>
+          <div class="seg" style="flex-wrap:wrap">
+            <label class="seg-opt"><input type="radio" name="metodo" checked="{{ metodoEfectivoChecked }}" onChange="{{ setMetodoEfectivo }}">Efectivo</label>
+            <label class="seg-opt"><input type="radio" name="metodo" checked="{{ metodoTransfChecked }}" onChange="{{ setMetodoTransf }}">Transferencia</label>
+            <label class="seg-opt"><input type="radio" name="metodo" checked="{{ metodoBizumChecked }}" onChange="{{ setMetodoBizum }}">Bizum</label>
+            <label class="seg-opt"><input type="radio" name="metodo" checked="{{ metodoTpvChecked }}" onChange="{{ setMetodoTpv }}">TPV</label>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" onClick="{{ closeSheet }}">Cancelar</button>
+          <button class="btn btn-primary" onClick="{{ confirmPago }}">Confirmar</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ sheetOpenTurno }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:color-mix(in srgb, var(--color-neutral-900) 55%, transparent);z-index:30">
+      <div class="dialog" style="width:100%;max-height:80%;overflow-y:auto">
+        <div class="dialog-title">{{ turnoForm.dialogTitle }}</div>
+        <div class="field">
+          <label>Día</label>
+          <select class="input" value="{{ turnoForm.day }}" onChange="{{ onTurnoDayChange }}">
+            <sc-for list="{{ diaOptions }}" as="d" hint-placeholder-count="6">
+              <option value="{{ d }}">{{ d }}</option>
+            </sc-for>
+          </select>
+        </div>
+        <div class="field">
+          <label>Grupo</label>
+          <select class="input" value="{{ turnoForm.grupo }}" onChange="{{ onTurnoGrupoChange }}">
+            <sc-for list="{{ grupoOptions }}" as="g" hint-placeholder-count="3">
+              <option value="{{ g.key }}">{{ g.label }}</option>
+            </sc-for>
+          </select>
+        </div>
+        <div style="display:flex;gap:10px">
+          <div class="field" style="flex:1">
+            <label>Desde</label>
+            <input class="input" type="text" placeholder="16:00" value="{{ turnoForm.start }}" onChange="{{ onTurnoStartChange }}">
+          </div>
+          <div class="field" style="flex:1">
+            <label>Hasta</label>
+            <input class="input" type="text" placeholder="17:30" value="{{ turnoForm.end }}" onChange="{{ onTurnoEndChange }}">
+          </div>
+        </div>
+        <div class="field">
+          <label>Cupo máximo (0 = sin límite)</label>
+          <input class="input" type="number" placeholder="0" value="{{ turnoForm.cupo }}" onChange="{{ onTurnoCupoChange }}">
+        </div>
+        <div class="dialog-actions" style="justify-content:space-between">
+          <sc-if value="{{ turnoForm.isEditing }}" hint-placeholder-val="{{ false }}">
+            <button class="btn btn-ghost" style="color:var(--color-accent-700)" onClick="{{ deleteTurno }}">Eliminar</button>
+          </sc-if>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-secondary" onClick="{{ closeSheet }}">Cancelar</button>
+            <button class="btn btn-primary" onClick="{{ saveTurno }}">Guardar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ sheetOpenTransferir }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:color-mix(in srgb, var(--color-neutral-900) 55%, transparent);z-index:30">
+      <div class="dialog" style="width:100%">
+        <div class="dialog-title">Cambiar turno</div>
+        <div class="dialog-body" style="opacity:1;margin:-6px 0 4px">{{ transferForm.studentName }}</div>
+        <div class="field">
+          <label>Nuevo turno</label>
+          <select class="input" value="{{ transferForm.turnoId }}" onChange="{{ onTransferTurnoChange }}">
+            <option value="">Sin turno asignado</option>
+            <sc-for list="{{ turnoOptions }}" as="t" hint-placeholder-count="4">
+              <option value="{{ t.id }}">{{ t.label }}</option>
+            </sc-for>
+          </select>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" onClick="{{ closeSheet }}">Cancelar</button>
+          <button class="btn btn-primary" onClick="{{ confirmTransfer }}">Confirmar</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ sheetOpenAlumno }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:color-mix(in srgb, var(--color-neutral-900) 55%, transparent);z-index:30">
+      <div class="dialog" style="width:100%;max-height:80%;overflow-y:auto">
+        <div class="dialog-title">{{ alumnoForm.dialogTitle }}</div>
+        <div class="field">
+          <label>Nombre</label>
+          <input class="input" type="text" value="{{ alumnoForm.name }}" onChange="{{ onAlumnoNameChange }}">
+        </div>
+        <div class="field">
+          <label>Grupo</label>
+          <select class="input" value="{{ alumnoForm.grupo }}" onChange="{{ onAlumnoGrupoChange }}">
+            <sc-for list="{{ grupoOptions }}" as="g" hint-placeholder-count="3">
+              <option value="{{ g.key }}">{{ g.label }}</option>
+            </sc-for>
+          </select>
+        </div>
+        <sc-if value="{{ alumnoForm.showAge }}" hint-placeholder-val="{{ true }}">
+          <div class="field">
+            <label>Edad</label>
+            <input class="input" type="number" value="{{ alumnoForm.age }}" onChange="{{ onAlumnoAgeChange }}">
+          </div>
+        </sc-if>
+        <sc-if value="{{ hasTurnoOptions }}" hint-placeholder-val="{{ false }}">
+          <div class="field">
+            <label>Turno (opcional)</label>
+            <select class="input" value="{{ alumnoForm.turnoId }}" onChange="{{ onAlumnoTurnoChange }}">
+              <option value="">Sin turno asignado</option>
+              <sc-for list="{{ turnoOptions }}" as="t" hint-placeholder-count="4">
+                <option value="{{ t.id }}">{{ t.label }}</option>
+              </sc-for>
+            </select>
+          </div>
+        </sc-if>
+        <div class="field">
+          <label>Cuota mensual</label>
+          <input class="input" type="number" value="{{ alumnoForm.monto }}" onChange="{{ onAlumnoMontoChange }}">
+        </div>
+        <div class="field">
+          <label>Fecha de inicio del curso</label>
+          <input class="input" type="date" value="{{ alumnoForm.fechaInicio }}" onChange="{{ onAlumnoFechaInicioChange }}">
+        </div>
+        <div class="field">
+          <label>Teléfono</label>
+          <input class="input" type="text" value="{{ alumnoForm.phone }}" onChange="{{ onAlumnoPhoneChange }}">
+        </div>
+        <div class="field">
+          <label>Nivel</label>
+          <input class="input" type="text" placeholder="Iniciación, medio, avanzado…" value="{{ alumnoForm.nivel }}" onChange="{{ onAlumnoNivelChange }}">
+        </div>
+        <div class="field">
+          <label>Contacto de emergencia</label>
+          <input class="input" type="text" placeholder="Nombre y teléfono" value="{{ alumnoForm.emergencia }}" onChange="{{ onAlumnoEmergenciaChange }}">
+        </div>
+        <div class="field">
+          <label>Notas (alergias, observaciones)</label>
+          <textarea class="input" rows="3" style="resize:vertical;font-family:inherit" value="{{ alumnoForm.notas }}" onChange="{{ onAlumnoNotasChange }}"></textarea>
+        </div>
+        <div class="dialog-actions" style="justify-content:space-between">
+          <sc-if value="{{ alumnoForm.isEditing }}" hint-placeholder-val="{{ false }}">
+            <button class="btn btn-ghost" style="color:var(--color-accent-700)" onClick="{{ deleteAlumno }}">Eliminar</button>
+          </sc-if>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-secondary" onClick="{{ closeSheet }}">Cancelar</button>
+            <button class="btn btn-primary" onClick="{{ saveAlumno }}">Guardar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const CUOTAS = { 'niños': 45, 'adolescentes': 45, 'adultos': 45 };
+const GRUPO_LABEL = { 'niños': 'Niños', 'adolescentes': 'Adolescentes', 'adultos': 'Adultos' };
+const GRUPO_STYLE = {
+  'niños': { bg: 'var(--color-accent-2-100)', color: 'var(--color-accent-2-800)', avatarBg: 'var(--color-accent-2-200)' },
+  'adolescentes': { bg: 'var(--color-accent-100)', color: 'var(--color-accent-800)', avatarBg: 'var(--color-accent-200)' },
+  'adultos': { bg: 'var(--color-neutral-200)', color: 'var(--color-neutral-800)', avatarBg: 'var(--color-neutral-300)' },
+};
+const PAGO_STYLE = {
+  al_dia: { bg: 'var(--color-accent-2-100)', color: 'var(--color-accent-2-800)', label: 'Al día' },
+  pendiente: { bg: 'var(--color-accent-300)', color: 'var(--color-accent-900)', label: 'Pendiente' },
+  no_aplica: { bg: 'var(--color-surface)', color: 'var(--color-neutral-600)', label: 'Antes del alta' },
+  atrasado: { bg: 'var(--color-accent-700)', color: 'var(--color-bg)', label: 'Atrasado' },
+};
+const DIAS_ORDEN = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const DIAS_ORDEN_FULL = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const MESES_NOMBRE = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+function computeToday() {
+  const now = new Date();
+  const bounds = { start: new Date(2026, 6, 1), end: new Date(2027, 6, 31) };
+  const clamped = now < bounds.start ? bounds.start : (now > bounds.end ? bounds.end : now);
+  const y = clamped.getFullYear(), mo = clamped.getMonth(), d = clamped.getDate();
+  const dow = clamped.getDay();
+  const key = `${y}-${pad2v(mo + 1)}-${pad2v(d)}`;
+  return {
+    day: DIAS_ORDEN_FULL[dow],
+    label: `${DIAS_ORDEN_FULL[dow].toLowerCase()} ${d} de ${MESES_NOMBRE[mo].toLowerCase()}`,
+    dateKey: key,
+    mes: `${MESES_NOMBRE[mo]} ${y}`,
+  };
+}
+function pad2v(n) { return String(n).padStart(2, '0'); }
+const TODAY = computeToday();
+const TODAY_DAY = TODAY.day;
+const TODAY_LABEL = TODAY.label;
+const TODAY_DATE_KEY = TODAY.dateKey;
+const TODAY_MES = TODAY.mes;
+const CURSO_LABEL = 'Curso 2026/2027';
+const CURSO_MESES = [
+  { label: 'Julio 2026', year: 2026, month: 6 },
+  { label: 'Agosto 2026', year: 2026, month: 7 },
+  { label: 'Septiembre 2026', year: 2026, month: 8 },
+  { label: 'Octubre 2026', year: 2026, month: 9 },
+  { label: 'Noviembre 2026', year: 2026, month: 10 },
+  { label: 'Diciembre 2026', year: 2026, month: 11 },
+  { label: 'Enero 2027', year: 2027, month: 0 },
+  { label: 'Febrero 2027', year: 2027, month: 1 },
+  { label: 'Marzo 2027', year: 2027, month: 2 },
+  { label: 'Abril 2027', year: 2027, month: 3 },
+  { label: 'Mayo 2027', year: 2027, month: 4 },
+  { label: 'Junio 2027', year: 2027, month: 5 },
+  { label: 'Julio 2027', year: 2027, month: 6 },
+];
+const MESES = CURSO_MESES.map(m => m.label);
+const DEFAULT_MES = 'Julio 2026';
+function mesMeta(mes) { return CURSO_MESES.find(m => m.label === mes); }
+function mesIndex(mes) { return CURSO_MESES.findIndex(m => m.label === mes); }
+function mesFromDate(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr + 'T00:00:00');
+  const found = CURSO_MESES.find(m => m.year === d.getFullYear() && m.month === d.getMonth());
+  return found ? found.label : null;
+}
+const COURSE_BOUNDS = {
+  adultos: { start: '2026-07-01', end: '2027-07-31' },
+  adolescentes: { start: '2026-07-01', end: '2027-06-30' },
+  'niños': { start: '2026-07-01', end: '2027-06-30' },
+};
+const STORAGE_KEY = 'arte-chromo-academia-datos-v1';
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyA-TpD2VQGouvH1eYiPriMq1LCKQG9YCss",
+  authDomain: "arte-chromo-e3327.firebaseapp.com",
+  databaseURL: "https://arte-chromo-e3327-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "arte-chromo-e3327",
+  storageBucket: "arte-chromo-e3327.firebasestorage.app",
+  messagingSenderId: "1079061109125",
+  appId: "1:1079061109125:web:1c384f40d3cad29fcb0cec"
+};
+const DIA_NUM = { 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6, 'Domingo': 0 };
+function pad2(n) { return String(n).padStart(2, '0'); }
+function classDaysForTurnoInMonth(t, mesLabel, closedDates) {
+  const meta = mesMeta(mesLabel);
+  if (!meta) return [];
+  const weekday = DIA_NUM[t.day];
+  const daysInMonth = new Date(meta.year, meta.month + 1, 0).getDate();
+  const bounds = COURSE_BOUNDS[t.grupo];
+  const out = [];
+  for (let d = 1; d <= daysInMonth; d++) {
+    if (new Date(meta.year, meta.month, d).getDay() !== weekday) continue;
+    const key = `${meta.year}-${pad2(meta.month + 1)}-${pad2(d)}`;
+    if (bounds && (key < bounds.start || key > bounds.end)) continue;
+    if (closedDates[key]) continue;
+    out.push({ key, day: d });
+  }
+  return out;
+}
+function buildDefaultClosedDates() {
+  const cd = {};
+  CURSO_MESES.forEach(({ year, month }) => {
+    const days = new Date(year, month + 1, 0).getDate();
+    for (let d = 1; d <= days; d++) {
+      const dow = new Date(year, month, d).getDay();
+      if (dow === 0 || dow === 1) cd[`${year}-${pad2(month + 1)}-${pad2(d)}`] = true;
+    }
+  });
+  return cd;
+}
+
+const DEFAULT_TURNOS = [
+  { id: 't1', day: 'Lunes', start: '16:00', end: '17:30', grupo: 'niños' },
+  { id: 't2', day: 'Lunes', start: '17:30', end: '19:00', grupo: 'adolescentes' },
+  { id: 't3', day: 'Martes', start: '18:00', end: '20:00', grupo: 'adultos' },
+  { id: 't4', day: 'Miércoles', start: '16:00', end: '17:30', grupo: 'niños' },
+  { id: 't5', day: 'Sábado', start: '10:00', end: '12:00', grupo: 'niños' },
+];
+function periodFor(start) { return (parseInt(start, 10) || 0) < 14 ? 'mañana' : 'tarde'; }
+
+const DEFAULT_STUDENTS = [
+  { id: 's1', name: 'Mateo Fernández', age: 7, grupo: 'niños', turnoId: 't1', phone: '+34 611 234 501', pagoEstado: 'al_dia' },
+  { id: 's2', name: 'Sofía Ramos', age: 8, grupo: 'niños', turnoId: 't1', phone: '+34 611 234 502', pagoEstado: 'pendiente' },
+  { id: 's3', name: 'Lucas Medina', age: 14, grupo: 'adolescentes', turnoId: 't2', phone: '+34 611 234 503', pagoEstado: 'al_dia' },
+  { id: 's4', name: 'Martina Ríos', age: 15, grupo: 'adolescentes', turnoId: 't2', phone: '+34 611 234 504', pagoEstado: 'atrasado' },
+  { id: 's5', name: 'Valeria Gómez', age: 29, grupo: 'adultos', turnoId: 't3', phone: '+34 611 234 505', pagoEstado: 'al_dia' },
+  { id: 's6', name: 'Diego Herrera', age: 41, grupo: 'adultos', turnoId: 't3', phone: '+34 611 234 506', pagoEstado: 'pendiente' },
+  { id: 's7', name: 'Emma Suárez', age: 7, grupo: 'niños', turnoId: 't4', phone: '+34 611 234 507', pagoEstado: 'al_dia' },
+  { id: 's8', name: 'Franco Aguirre', age: 8, grupo: 'niños', turnoId: 't5', phone: '+34 611 234 508', pagoEstado: 'al_dia' },
+];
+const GRUPO_OPTIONS = [{ key: 'niños', label: 'Niños' }, { key: 'adolescentes', label: 'Adolescentes' }, { key: 'adultos', label: 'Adultos' }];
+
+const ASSIST_PATTERNS = [
+  { presentes: 8, total: 8, ultimas: ['presente', 'presente', 'presente', 'presente'] },
+  { presentes: 7, total: 8, ultimas: ['presente', 'justificada', 'presente', 'presente'] },
+  { presentes: 6, total: 8, ultimas: ['ausente', 'presente', 'presente', 'presente'] },
+  { presentes: 5, total: 8, ultimas: ['presente', 'ausente', 'justificada', 'presente'] },
+];
+
+function initials(name) {
+  return name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+}
+function fmtMoney(n) {
+  return Math.round(n).toLocaleString('es-ES') + ' €';
+}
+const METODO_LABEL = { efectivo: 'Efectivo', transferencia: 'Transferencia', bizum: 'Bizum', tpv: 'TPV' };
+function buildHistorial(grupo, estado) {
+  const monto = CUOTAS[grupo];
+  if (estado === 'al_dia') return [{ mes: 'Junio 2026', monto, metodo: 'Transferencia', fecha: '1 jun' }, { mes: 'Julio 2026', monto, metodo: 'Efectivo', fecha: '2 jul' }];
+  if (estado === 'pendiente') return [{ mes: 'Junio 2026', monto, metodo: 'Efectivo', fecha: '30 may' }];
+  return [{ mes: 'Mayo 2026', monto, metodo: 'Transferencia', fecha: '28 abr' }];
+}
+
+class Component extends DCLogic {
+  state = {
+    tab: 'hoy',
+    view: null,
+    sheet: null,
+    searchQuery: '',
+    searchQueryTurnos: '',
+    groupFilter: 'todos',
+    attendance: {},
+    payments: {},
+    closedDates: buildDefaultClosedDates(),
+    selectedMesPagos: DEFAULT_MES,
+    selectedMesEstadisticas: DEFAULT_MES,
+    selectedMesCalendario: DEFAULT_MES,
+    selectedMesPerfil: DEFAULT_MES,
+    estadisticasScope: 'mes',
+    morososExpanded: false,
+    avisoTurno: null,
+    cloudOnline: false,
+    recordatoriosListaExpanded: false,
+    pagoForm: { mes: DEFAULT_MES, monto: 0, metodo: 'efectivo' },
+    turnos: DEFAULT_TURNOS,
+    students: DEFAULT_STUDENTS,
+    turnoForm: null,
+    alumnoForm: null,
+    transferForm: null,
+  };
+
+  _clientId = 'c' + Math.random().toString(36).slice(2, 10);
+
+  componentDidMount() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        this.setState(saved);
+      }
+    } catch (e) {}
+    this._loaded = true;
+    this._persistTimer = setInterval(() => this.persist(), 2000);
+    this._onHide = () => this.persist();
+    window.addEventListener('pagehide', this._onHide);
+    window.addEventListener('visibilitychange', this._onHide);
+    window.addEventListener('beforeunload', this._onHide);
+    this.initCloud();
+  }
+
+  initCloud = () => {
+    const tryInit = () => {
+      if (!window.firebase || !window.firebase.database) return false;
+      try {
+        if (!window.firebase.apps.length) window.firebase.initializeApp(FIREBASE_CONFIG);
+        this._dbRef = window.firebase.database().ref('academia');
+        this._dbRef.on('value', (snap) => {
+          const remote = snap.val();
+          if (!remote || !remote.json) return;
+          if (remote.origen === this._clientId) return;
+          if (remote.json === this._lastSaved) return;
+          try {
+            const data = JSON.parse(remote.json);
+            this._lastSaved = remote.json;
+            this._lastPushed = remote.json;
+            this._skipNextPush = true;
+            this.setState(data);
+          } catch (e) {}
+        });
+        window.firebase.database().ref('.info/connected').on('value', (s) => {
+          this.setState({ cloudOnline: !!s.val() });
+        });
+        this._cloudReady = true;
+        return true;
+      } catch (e) { return false; }
+    };
+    if (!tryInit()) {
+      let tries = 0;
+      const iv = setInterval(() => { if (tryInit() || ++tries > 40) clearInterval(iv); }, 250);
+    }
+  };
+
+  componentWillUnmount() {
+    clearInterval(this._persistTimer);
+    window.removeEventListener('pagehide', this._onHide);
+    window.removeEventListener('visibilitychange', this._onHide);
+    window.removeEventListener('beforeunload', this._onHide);
+    if (this._dbRef) this._dbRef.off();
+    this.persist();
+  }
+
+  persist = () => {
+    if (!this._loaded) return;
+    const persisted = ['turnos', 'students', 'attendance', 'payments', 'closedDates'];
+    const toSave = {};
+    persisted.forEach(k => { toSave[k] = this.state[k]; });
+    const json = JSON.stringify(toSave);
+    if (json !== this._lastSaved) {
+      try { localStorage.setItem(STORAGE_KEY, json); } catch (e) {}
+      this._lastSaved = json;
+    }
+    if (!this._cloudReady || !this._dbRef) return;
+    if (json === this._lastPushed) return;
+    if (this._skipNextPush) { this._skipNextPush = false; this._lastPushed = json; return; }
+    this._lastPushed = json;
+    this._dbRef.set({ json, origen: this._clientId, ts: Date.now() }).catch(() => {});
+  };
+
+  componentDidUpdate(prevProps, prevState) {
+    this.persist();
+  }
+
+  getStudent = (id) => this.state.students.find(s => s.id === id);
+  getTurno = (id) => this.state.turnos.find(t => t.id === id);
+  getStudentsForTurno = (turnoId) => this.state.students.filter(s => s.turnoId === turnoId && s.activo !== false && !s.enEspera);
+  getWaitlist = (turnoId) => this.state.students.filter(s => s.turnoId === turnoId && s.activo !== false && s.enEspera);
+  getGrupo = (student) => student.grupo || (this.getTurno(student.turnoId) || {}).grupo || 'niños';
+  montoFor = (student) => student.customMonto != null ? student.customMonto : CUOTAS[this.getGrupo(student)];
+  getPagoEstado = (student, mes) => {
+    const m = mes || this.state.selectedMesPagos;
+    if (student.fechaInicio) {
+      const startMes = mesFromDate(student.fechaInicio);
+      if (startMes && mesIndex(m) < mesIndex(startMes)) return 'no_aplica';
+    }
+    const paid = this.state.payments[student.id] && this.state.payments[student.id][m];
+    if (paid) return 'al_dia';
+    return m === DEFAULT_MES ? student.pagoEstado : 'pendiente';
+  };
+  getHistorial = (student) => {
+    let hist = buildHistorial(this.getGrupo(student), student.pagoEstado);
+    const paidMap = this.state.payments[student.id] || {};
+    Object.keys(paidMap).forEach(mes => hist.push({ mes, monto: paidMap[mes].monto, metodo: paidMap[mes].metodo }));
+    return hist;
+  };
+
+  goHoy = () => this.setState({ tab: 'hoy', view: null });
+  goTurnos = () => this.setState({ tab: 'turnos', view: null });
+  goAlumnos = () => this.setState({ tab: 'alumnos', view: null });
+  goPagos = () => this.setState({ tab: 'pagos', view: null });
+  goReportes = () => this.setState({ tab: 'reportes', view: null });
+  goCurso = () => this.setState({ tab: 'curso', view: null });
+  goBack = () => this.setState({ view: null });
+  openAttendance = (turnoId, mes, dia) => this.setState({ view: { type: 'attendance', id: turnoId, mes: mes || DEFAULT_MES, dia: dia || null } });
+  openProfile = (studentId) => this.setState({ view: { type: 'profile', id: studentId } });
+  onMesAsistenciaChange = (e) => { const v = e.target.value; this.setState(s => ({ view: { ...s.view, mes: v, dia: null } })); };
+  onDiaAsistenciaChange = (dia) => this.setState(s => ({ view: { ...s.view, dia } }));
+  onMesPagosChange = (e) => { const v = e.target.value; this.setState({ selectedMesPagos: v }); };
+  onMesEstadisticasChange = (e) => { const v = e.target.value; this.setState({ selectedMesEstadisticas: v }); };
+  setEstadisticasScope = (scope) => this.setState({ estadisticasScope: scope });
+  toggleMorosos = () => this.setState(s => ({ morososExpanded: !s.morososExpanded }));
+  onMesCalendarioChange = (e) => { const v = e.target.value; this.setState({ selectedMesCalendario: v }); };
+  onMesAlumnosChange = (e) => { const v = e.target.value; this.setState({ selectedMesPerfil: v }); };
+  countAsistenciaMes = (student, mes) => {
+    const t = this.getTurno(student.turnoId);
+    if (!t) return null;
+    const days = classDaysForTurnoInMonth(t, mes, this.state.closedDates);
+    let presentes = 0;
+    days.forEach(({ key }) => {
+      const marks = this.state.attendance[`${t.id}::${key}`] || {};
+      if (marks[student.id] === 'presente') presentes++;
+    });
+    return { presentes, total: days.length };
+  };
+  openCalendar = () => this.setState({ view: { type: 'calendar' } });
+  toggleClosedDate = (key) => this.setState(s => {
+    const cd = { ...s.closedDates };
+    if (cd[key]) delete cd[key]; else cd[key] = true;
+    return { closedDates: cd };
+  });
+  markAttendance = (turnoId, diaKey, studentId, status) => {
+    const key = `${turnoId}::${diaKey}`;
+    this.setState(s => {
+      const marks = { ...(s.attendance[key] || {}) };
+      marks[studentId] = marks[studentId] === status ? undefined : status;
+      return { attendance: { ...s.attendance, [key]: marks } };
+    });
+  };
+  openPagoSheet = (studentId) => {
+    const s = this.getStudent(studentId);
+    this.setState(st => ({ sheet: { type: 'pago', studentId }, pagoForm: { mes: st.selectedMesPagos, monto: this.montoFor(s), metodo: 'efectivo' } }));
+  };
+  closeSheet = () => this.setState({ sheet: null });
+  confirmPago = () => {
+    const { sheet, pagoForm } = this.state;
+    if (!sheet) return;
+    this.setState(s => {
+      const existing = s.payments[sheet.studentId] || {};
+      return {
+        payments: {
+          ...s.payments,
+          [sheet.studentId]: { ...existing, [pagoForm.mes]: { monto: Number(pagoForm.monto) || 0, metodo: METODO_LABEL[pagoForm.metodo] || 'Efectivo' } },
+        },
+        sheet: null,
+      };
+    });
+  };
+  onSearchChange = (e) => this.setState({ searchQuery: e.target.value });
+  onPagoMesChange = (e) => { const v = e.target.value; this.setState(s => ({ pagoForm: { ...s.pagoForm, mes: v } })); };
+  onPagoMontoChange = (e) => { const v = e.target.value; this.setState(s => ({ pagoForm: { ...s.pagoForm, monto: v } })); };
+  setMetodoEfectivo = () => this.setState(s => ({ pagoForm: { ...s.pagoForm, metodo: 'efectivo' } }));
+  setMetodoTransf = () => this.setState(s => ({ pagoForm: { ...s.pagoForm, metodo: 'transferencia' } }));
+  setMetodoBizum = () => this.setState(s => ({ pagoForm: { ...s.pagoForm, metodo: 'bizum' } }));
+  setMetodoTpv = () => this.setState(s => ({ pagoForm: { ...s.pagoForm, metodo: 'tpv' } }));
+
+  openNewTurno = () => this.setState({ sheet: { type: 'turno' }, turnoForm: { id: null, day: 'Lunes', grupo: 'niños', start: '', end: '', cupo: '' } });
+  openEditTurno = (t) => this.setState({ sheet: { type: 'turno' }, turnoForm: { id: t.id, day: t.day, grupo: t.grupo, start: t.start, end: t.end, cupo: t.cupo || '' } });
+  onTurnoDayChange = (e) => { const v = e.target.value; this.setState(s => ({ turnoForm: { ...s.turnoForm, day: v } })); };
+  onTurnoGrupoChange = (e) => { const v = e.target.value; this.setState(s => ({ turnoForm: { ...s.turnoForm, grupo: v } })); };
+  onTurnoStartChange = (e) => { const v = e.target.value; this.setState(s => ({ turnoForm: { ...s.turnoForm, start: v } })); };
+  onTurnoEndChange = (e) => { const v = e.target.value; this.setState(s => ({ turnoForm: { ...s.turnoForm, end: v } })); };
+  onTurnoCupoChange = (e) => { const v = e.target.value; this.setState(s => ({ turnoForm: { ...s.turnoForm, cupo: v } })); };
+  saveTurno = () => {
+    const f = this.state.turnoForm;
+    if (!f) return;
+    this.setState(s => {
+      if (f.id) {
+        return { turnos: s.turnos.map(t => t.id === f.id ? { ...t, day: f.day, grupo: f.grupo, start: f.start, end: f.end, cupo: Number(f.cupo) || 0 } : t), sheet: null };
+      }
+      const id = 't' + Date.now();
+      return { turnos: [...s.turnos, { id, day: f.day, grupo: f.grupo, start: f.start || '00:00', end: f.end || '00:00', cupo: Number(f.cupo) || 0 }], sheet: null };
+    });
+  };
+  deleteTurno = () => {
+    const f = this.state.turnoForm;
+    if (!f || !f.id) return;
+    if (!window.confirm('¿Seguro que querés eliminar este turno? Los alumnos asignados quedarán sin turno.')) return;
+    this.setState(s => ({
+      turnos: s.turnos.filter(t => t.id !== f.id),
+      students: s.students.map(st => st.turnoId === f.id ? { ...st, turnoId: '' } : st),
+      sheet: null,
+    }));
+  };
+
+  openNewAlumno = () => {
+    const firstTurno = this.state.turnos[0];
+    const grupo = firstTurno ? firstTurno.grupo : 'niños';
+    this.setState({ sheet: { type: 'alumno' }, alumnoForm: { id: null, name: '', age: '', grupo, turnoId: firstTurno ? firstTurno.id : '', phone: '', monto: CUOTAS[grupo], fechaInicio: '2026-07-28', nivel: '', emergencia: '', notas: '' } });
+  };
+  openEditAlumno = (s) => this.setState({ sheet: { type: 'alumno' }, alumnoForm: { id: s.id, name: s.name, age: s.age, grupo: this.getGrupo(s), turnoId: s.turnoId || '', phone: s.phone, monto: this.montoFor(s), fechaInicio: s.fechaInicio || '', nivel: s.nivel || '', emergencia: s.emergencia || '', notas: s.notas || '' } });
+  onAlumnoNameChange = (e) => { const v = e.target.value; this.setState(s => ({ alumnoForm: { ...s.alumnoForm, name: v } })); };
+  onAlumnoAgeChange = (e) => { const v = e.target.value; this.setState(s => ({ alumnoForm: { ...s.alumnoForm, age: v } })); };
+  onAlumnoGrupoChange = (e) => { const v = e.target.value; this.setState(s => ({ alumnoForm: { ...s.alumnoForm, grupo: v, monto: CUOTAS[v] } })); };
+  onAlumnoTurnoChange = (e) => { const v = e.target.value; this.setState(s => ({ alumnoForm: { ...s.alumnoForm, turnoId: v } })); };
+  onAlumnoPhoneChange = (e) => { const v = e.target.value; this.setState(s => ({ alumnoForm: { ...s.alumnoForm, phone: v } })); };
+  onAlumnoMontoChange = (e) => { const v = e.target.value; this.setState(s => ({ alumnoForm: { ...s.alumnoForm, monto: v } })); };
+  onAlumnoFechaInicioChange = (e) => { const v = e.target.value; this.setState(s => ({ alumnoForm: { ...s.alumnoForm, fechaInicio: v } })); };
+  onAlumnoNivelChange = (e) => { const v = e.target.value; this.setState(s => ({ alumnoForm: { ...s.alumnoForm, nivel: v } })); };
+  onAlumnoEmergenciaChange = (e) => { const v = e.target.value; this.setState(s => ({ alumnoForm: { ...s.alumnoForm, emergencia: v } })); };
+  onAlumnoNotasChange = (e) => { const v = e.target.value; this.setState(s => ({ alumnoForm: { ...s.alumnoForm, notas: v } })); };
+  toggleActivo = (id) => this.setState(s => ({ students: s.students.map(st => st.id === id ? { ...st, activo: st.activo === false } : st) }));
+  togglePlaza = (id) => this.setState(s => ({ students: s.students.map(st => st.id === id ? { ...st, enEspera: !st.enEspera } : st) }));
+  avisarTurno = (t) => {
+    const texto = window.prompt('Mensaje para todo el turno:', `Hola, os escribimos de Arte Chromo sobre la clase de ${t.day} ${t.start}–${t.end}: `);
+    if (!texto) return;
+    this.setState({ avisoTurno: { turnoId: t.id, texto } });
+  };
+  cerrarAviso = () => this.setState({ avisoTurno: null });
+  saveAlumno = () => {
+    const f = this.state.alumnoForm;
+    if (!f || !f.name.trim()) return;
+    this.setState(s => {
+      if (f.id) {
+        return { students: s.students.map(st => st.id === f.id ? { ...st, name: f.name, age: Number(f.age) || st.age, grupo: f.grupo, turnoId: f.turnoId, phone: f.phone, customMonto: Number(f.monto) || 0, fechaInicio: f.fechaInicio, nivel: f.nivel, emergencia: f.emergencia, notas: f.notas } : st), sheet: null };
+      }
+      const id = 's' + Date.now();
+      const t = s.turnos.find(x => x.id === f.turnoId);
+      const ocupadas = t ? s.students.filter(x => x.turnoId === t.id && x.activo !== false && !x.enEspera).length : 0;
+      const enEspera = !!(t && t.cupo > 0 && ocupadas >= t.cupo);
+      return { students: [...s.students, { id, name: f.name, age: Number(f.age) || 0, grupo: f.grupo, turnoId: f.turnoId, phone: f.phone, pagoEstado: 'pendiente', customMonto: Number(f.monto) || 0, fechaInicio: f.fechaInicio, nivel: f.nivel, emergencia: f.emergencia, notas: f.notas, activo: true, enEspera }], sheet: null };
+    });
+  };
+  deleteAlumno = (idArg) => {
+    const id = idArg || (this.state.alumnoForm && this.state.alumnoForm.id);
+    if (!id) return;
+    if (!window.confirm('¿Seguro que querés eliminar este alumno? Esta acción no se puede deshacer.')) return;
+    this.setState(s => ({ students: s.students.filter(st => st.id !== id), sheet: null, view: null }));
+  };
+  openTransferir = (s) => this.setState({ sheet: { type: 'transferir', studentId: s.id }, transferForm: { turnoId: s.turnoId || '' } });
+  onTransferTurnoChange = (e) => { const v = e.target.value; this.setState(f => ({ transferForm: { ...f.transferForm, turnoId: v } })); };
+  confirmTransfer = () => {
+    const { sheet, transferForm } = this.state;
+    if (!sheet) return;
+    this.setState(s => ({ students: s.students.map(st => st.id === sheet.studentId ? { ...st, turnoId: transferForm.turnoId } : st), sheet: null }));
+  };
+  marcarTodosPresentes = () => {
+    const { view, attendance, closedDates } = this.state;
+    if (!view) return;
+    const t = this.getTurno(view.id);
+    if (!t) return;
+    const mes = view.mes || DEFAULT_MES;
+    const classDays = classDaysForTurnoInMonth(t, mes, closedDates);
+    const dia = view.dia && classDays.some(cd => cd.key === view.dia) ? view.dia : (classDays[0] ? classDays[0].key : null);
+    if (!dia) return;
+    const list = this.getStudentsForTurno(t.id);
+    const key = `${t.id}::${dia}`;
+    const marks = { ...(attendance[key] || {}) };
+    list.forEach(s => { if (!marks[s.id]) marks[s.id] = 'presente'; });
+    this.setState(s => ({ attendance: { ...s.attendance, [key]: marks }, view: { ...s.view, dia } }));
+  };
+  onSearchTurnosChange = (e) => this.setState({ searchQueryTurnos: e.target.value });
+  buildRecordatorio = (student) => {
+    const monto = fmtMoney(this.montoFor(student));
+    const mes = this.state.selectedMesPagos || DEFAULT_MES;
+    const texto = `Hola ${student.name.split(' ')[0]}, te recordamos que tienes pendiente el pago de la cuota de ${mes} (${monto}) en Arte Chromo. ¡Gracias!`;
+    const phone = (student.phone || '').replace(/[^0-9]/g, '');
+    return `https://wa.me/${phone}?text=${encodeURIComponent(texto)}`;
+  };
+  enviarTodosRecordatorios = (hrefs) => {
+    hrefs.forEach((href, i) => {
+      setTimeout(() => window.open(href, '_blank'), i * 400);
+    });
+  };
+  toggleRecordatoriosLista = () => this.setState(s => ({ recordatoriosListaExpanded: !s.recordatoriosListaExpanded }));
+  onExportarDatos = () => {
+    const persisted = ['turnos', 'students', 'attendance', 'payments', 'closedDates'];
+    const data = {}; persisted.forEach(k => { data[k] = this.state[k]; });
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const fecha = new Date().toISOString().slice(0, 10);
+    a.href = url; a.download = `arte-chromo-copia-${fecha}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+  onImportarDatos = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (!window.confirm('Esto reemplazará los datos actuales por los de la copia. ¿Continuar?')) return;
+        this.setState(data);
+      } catch (err) { window.alert('El archivo no es una copia de seguridad válida.'); }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  enrichTurno = (t) => {
+    const students = this.getStudentsForTurno(t.id);
+    const marks = this.state.attendance[`${t.id}::${DEFAULT_MES}`] || {};
+    const totalCount = students.length;
+    const presentCount = students.filter(s => marks[s.id] === 'presente').length;
+    const markedCount = students.filter(s => marks[s.id]).length;
+    const taken = markedCount === totalCount && totalCount > 0;
+    const gs = GRUPO_STYLE[t.grupo];
+    return {
+      ...t,
+      time: `${t.start}–${t.end}`,
+      period: periodFor(t.start),
+      grupoLabel: GRUPO_LABEL[t.grupo],
+      grupoBg: gs.bg,
+      grupoColor: gs.color,
+      totalCount,
+      cupoLabel: t.cupo > 0 ? `${totalCount}/${t.cupo} plazas` : `${totalCount} alumnos`,
+      esperaCount: this.getWaitlist(t.id).length,
+      hasEsperaBadge: this.getWaitlist(t.id).length > 0,
+      statusLabel: taken ? `${presentCount}/${totalCount} presentes` : (markedCount > 0 ? `${markedCount}/${totalCount} marcados` : 'Sin tomar asistencia'),
+      statusColor: taken ? 'var(--color-accent-2-800)' : 'var(--color-neutral-600)',
+      onOpen: () => this.openAttendance(t.id),
+    };
+  };
+
+  renderVals() {
+    const st = this.state;
+    const turnos = st.turnos;
+    const allStudents = st.students;
+    const students = st.students.filter(s => s.activo !== false);
+    const view = st.view;
+    const viewType = view ? view.type : null;
+    const isAttendance = viewType === 'attendance';
+    const isProfile = viewType === 'profile';
+    const isCalendar = viewType === 'calendar';
+    const isTabView = !view;
+    const tab = st.tab;
+    const isHoy = isTabView && tab === 'hoy';
+    const isTurnos = isTabView && tab === 'turnos';
+    const isAlumnos = isTabView && tab === 'alumnos';
+    const isPagos = isTabView && tab === 'pagos';
+    const isReportes = isTabView && tab === 'reportes';
+    const isCurso = isTabView && tab === 'curso';
+    const showBack = isAttendance || isProfile || isCalendar;
+
+    const todayTurnos = turnos.filter(t => t.day === TODAY_DAY).map(t => {
+      const marks = this.state.attendance[`${t.id}::${TODAY_DATE_KEY}`] || {};
+      const list = this.getStudentsForTurno(t.id);
+      const notTaken = list.length > 0 && list.filter(s => marks[s.id]).length === 0;
+      return { ...this.enrichTurno(t), notTaken, onOpen: () => this.openAttendance(t.id, TODAY_MES, TODAY_DATE_KEY) };
+    });
+    const hasTurnosHoy = todayTurnos.length > 0;
+    const noTurnosHoy = !hasTurnosHoy;
+
+    const morosos = students.filter(s => {
+      let count = 0;
+      for (const m of MESES) { if (this.getPagoEstado(s, m) === 'pendiente' || this.getPagoEstado(s, m) === 'atrasado') count++; }
+      return count >= 2;
+    });
+    const hasMorosos = morosos.length > 0;
+    const morososList = morosos.map(s => {
+      const pendMeses = MESES.filter(m => this.getPagoEstado(s, m) === 'pendiente' || this.getPagoEstado(s, m) === 'atrasado');
+      return { id: s.id, name: s.name, mesesLabel: `${pendMeses.length} meses`, onOpen: () => this.openProfile(s.id) };
+    });
+
+    const qTurnos = st.searchQueryTurnos.trim().toLowerCase();
+    const turnosByDay = DIAS_ORDEN.map(day => ({
+      day,
+      items: turnos.filter(t => t.day === day)
+        .filter(t => !qTurnos || `${t.day} ${GRUPO_LABEL[t.grupo]} ${t.start} ${t.end}`.toLowerCase().includes(qTurnos))
+        .map(t => ({ ...this.enrichTurno(t), isEmpty: this.getStudentsForTurno(t.id).length === 0, onEdit: (e) => { e.stopPropagation(); this.openEditTurno(t); } })),
+    })).filter(g => g.items.length > 0);
+
+    const filterDefs = [
+      { key: 'todos', label: 'Todos' },
+      { key: 'niños', label: 'Niños' },
+      { key: 'adolescentes', label: 'Adolescentes' },
+      { key: 'adultos', label: 'Adultos' },
+      { key: 'bajas', label: 'Bajas' },
+    ];
+    const filterChips = filterDefs.map(f => {
+      const active = st.groupFilter === f.key;
+      return {
+        key: f.key, label: f.label,
+        bg: active ? 'var(--color-accent-700)' : 'var(--color-surface)',
+        color: active ? 'var(--color-bg)' : 'var(--color-text)',
+        onClick: () => this.setState({ groupFilter: f.key }),
+      };
+    });
+
+    const q = st.searchQuery.trim().toLowerCase();
+    const baseAlumnos = st.groupFilter === 'bajas' ? allStudents.filter(s => s.activo === false) : students;
+    const filteredStudents = baseAlumnos
+      .filter(s => st.groupFilter === 'todos' || st.groupFilter === 'bajas' || this.getGrupo(s) === st.groupFilter)
+      .filter(s => !q || s.name.toLowerCase().includes(q))
+      .map(s => {
+        const t = this.getTurno(s.turnoId);
+        const grupo = this.getGrupo(s);
+        const gs = GRUPO_STYLE[grupo];
+        const estado = this.getPagoEstado(s);
+        const ps = PAGO_STYLE[estado];
+        return {
+          id: s.id, name: s.name, age: s.age, initials: initials(s.name),
+          avatarBg: gs.avatarBg, avatarColor: gs.color,
+          turnoInfo: t ? `${t.day} ${t.start}–${t.end}` : 'Sin turno asignado',
+          showAge: grupo !== 'adultos',
+          pagoLabel: ps.label, pagoBg: ps.bg, pagoColor: ps.color,
+          onOpen: () => this.openProfile(s.id),
+        };
+      });
+    const hasStudentsResults = filteredStudents.length > 0;
+    const noStudentsResults = !hasStudentsResults;
+
+    const buildPagoRow = (s) => {
+      const gs = GRUPO_STYLE[this.getGrupo(s)];
+      return {
+        id: s.id, name: s.name, initials: initials(s.name),
+        avatarBg: gs.avatarBg, avatarColor: gs.color,
+        montoLabel: fmtMoney(this.montoFor(s)),
+        onOpen: () => this.openProfile(s.id),
+        onQuickPago: () => this.openPagoSheet(s.id),
+        recordatorioHref: this.buildRecordatorio(s),
+      };
+    };
+    const pagosAtrasados = students.filter(s => this.getPagoEstado(s) === 'atrasado').map(buildPagoRow);
+    const pagosPendientes = students.filter(s => this.getPagoEstado(s) === 'pendiente').map(buildPagoRow);
+    const pagosPorGrupo = ['niños', 'adolescentes', 'adultos'].map(g => {
+      const gs = GRUPO_STYLE[g];
+      const items = students.filter(s => this.getGrupo(s) === g).map(s => {
+        const row = buildPagoRow(s);
+        const estado = this.getPagoEstado(s);
+        const ps = PAGO_STYLE[estado];
+        return { ...row, pagoLabel: ps.label, pagoColor: ps.color, showQuickPago: estado === 'pendiente' || estado === 'atrasado' };
+      });
+      return { key: g, label: GRUPO_LABEL[g], bg: gs.bg, color: gs.color, items };
+    }).filter(g => g.items.length > 0);
+    const hasPagosGrupos = pagosPorGrupo.length > 0;
+    const pendientesTotalList = students.filter(s => { const e = this.getPagoEstado(s); return e === 'pendiente' || e === 'atrasado'; }).map(s => ({ id: s.id, name: s.name, recordatorioHref: this.buildRecordatorio(s) }));
+    const hasPendientesTotal = pendientesTotalList.length > 0;
+    const pendientesTotalCount = pendientesTotalList.length;
+    const hasAtrasados = pagosAtrasados.length > 0;
+    const hasPendientes = pagosPendientes.length > 0;
+    const alDiaCount = students.filter(s => this.getPagoEstado(s) === 'al_dia').length;
+    const recaudado = students.filter(s => this.getPagoEstado(s) === 'al_dia').reduce((sum, s) => sum + this.montoFor(s), 0);
+    const pendienteMonto = students.filter(s => this.getPagoEstado(s) === 'pendiente' || this.getPagoEstado(s) === 'atrasado').reduce((sum, s) => sum + this.montoFor(s), 0);
+    const pagosStats = {
+      recaudadoLabel: fmtMoney(recaudado),
+      pendientesCount: pagosPendientes.length + pagosAtrasados.length,
+      pendienteMontoLabel: fmtMoney(pendienteMonto),
+      alDiaCount,
+    };
+
+    const gruposList = ['niños', 'adolescentes', 'adultos'];
+    const isEstadisticasMes = st.estadisticasScope === 'mes';
+    const estadisticasScopeChips = [
+      { key: 'mes', label: 'Este mes' },
+      { key: 'curso', label: 'Curso completo' },
+    ].map(c => {
+      const active = st.estadisticasScope === c.key;
+      return { key: c.key, label: c.label, bg: active ? 'var(--color-accent-700)' : 'var(--color-surface)', color: active ? 'var(--color-bg)' : 'var(--color-text)', onClick: () => this.setEstadisticasScope(c.key) };
+    });
+    const asistenciaPorGrupo = gruposList.map(g => {
+      const gStudents = students.filter(s => this.getGrupo(s) === g);
+      let pct = 0;
+      if (gStudents.length) {
+        if (isEstadisticasMes) {
+          pct = Math.round(gStudents.reduce((sum, s) => {
+            const idx = allStudents.findIndex(x => x.id === s.id);
+            const p = ASSIST_PATTERNS[((idx % 4) + 4) % 4] || ASSIST_PATTERNS[0];
+            return sum + (p.presentes / p.total) * 100;
+          }, 0) / gStudents.length);
+        } else {
+          let totalP = 0, totalC = 0;
+          gStudents.forEach(s => {
+            MESES.forEach(m => {
+              const a = this.countAsistenciaMes(s, m);
+              if (a) { totalP += a.presentes; totalC += a.total; }
+            });
+          });
+          pct = totalC ? Math.round((totalP / totalC) * 100) : 0;
+        }
+      }
+      return { label: GRUPO_LABEL[g], pctLabel: `${pct}%`, barWidth: `${pct}%`, barColor: GRUPO_STYLE[g].color };
+    });
+    const maxGrupoCount = Math.max(1, ...gruposList.map(g => students.filter(s => this.getGrupo(s) === g).length));
+    const alumnosPorGrupo = gruposList.map(g => {
+      const count = students.filter(s => this.getGrupo(s) === g).length;
+      return { label: GRUPO_LABEL[g], count, barWidth: `${Math.round((count / maxGrupoCount) * 100)}%`, barColor: GRUPO_STYLE[g].color };
+    });
+    const mesEst = st.selectedMesEstadisticas;
+    const recaudadoEst = isEstadisticasMes
+      ? students.filter(s => this.getPagoEstado(s, mesEst) === 'al_dia').reduce((sum, s) => sum + this.montoFor(s), 0)
+      : MESES.reduce((sum, m) => sum + students.filter(s => this.getPagoEstado(s, m) === 'al_dia').reduce((s2, s) => s2 + this.montoFor(s), 0), 0);
+    const ingresosMesLabel = fmtMoney(recaudadoEst);
+    const ingresosLabelKicker = isEstadisticasMes ? 'Ingresos del mes' : 'Ingresos del curso';
+    const alumnosTotal = students.length;
+
+    let currentTurno = null;
+    let esperaList = [], hasEspera = false, avisoLinks = [], hasAvisoLinks = false;
+    if (isAttendance) {
+      const t = this.getTurno(view.id);
+      const mes = view.mes || DEFAULT_MES;
+      const classDays = classDaysForTurnoInMonth(t, mes, st.closedDates);
+      const selectedDia = view.dia && classDays.some(cd => cd.key === view.dia) ? view.dia : (classDays[0] ? classDays[0].key : null);
+      const classDaysThisMonth = classDays.map(cd => ({
+        key: cd.key, label: `${cd.day} ${mes.split(' ')[0].slice(0, 3)}`,
+        bg: cd.key === selectedDia ? 'var(--color-accent-700)' : 'var(--color-surface)',
+        color: cd.key === selectedDia ? 'var(--color-bg)' : 'var(--color-text)',
+        onClick: () => this.onDiaAsistenciaChange(cd.key),
+      }));
+      const students = this.getStudentsForTurno(t.id);
+      const marks = selectedDia ? (st.attendance[`${t.id}::${selectedDia}`] || {}) : {};
+      const activeBg = 'var(--color-accent-700)', activeColor = 'var(--color-bg)';
+      const idleBg = 'var(--color-surface)', idleColor = 'var(--color-neutral-600)';
+      const enriched = students.map(s => {
+        const gs = GRUPO_STYLE[t.grupo];
+        const status = marks[s.id];
+        return {
+          id: s.id, name: s.name, age: s.age, initials: initials(s.name),
+          showAge: t.grupo !== 'adultos',
+          avatarBg: gs.avatarBg, avatarColor: gs.color,
+          presenteBg: status === 'presente' ? activeBg : idleBg, presenteColor: status === 'presente' ? activeColor : idleColor,
+          justificadaBg: status === 'justificada' ? activeBg : idleBg, justificadaColor: status === 'justificada' ? activeColor : idleColor,
+          ausenteBg: status === 'ausente' ? activeBg : idleBg, ausenteColor: status === 'ausente' ? activeColor : idleColor,
+          onPresente: () => this.markAttendance(t.id, selectedDia, s.id, 'presente'),
+          onJustificada: () => this.markAttendance(t.id, selectedDia, s.id, 'justificada'),
+          onAusente: () => this.markAttendance(t.id, selectedDia, s.id, 'ausente'),
+        };
+      });
+      currentTurno = {
+        grupoLabel: GRUPO_LABEL[t.grupo], period: periodFor(t.start), day: t.day, time: `${t.start}–${t.end}`, mes,
+        presentCount: students.filter(s => marks[s.id] === 'presente').length,
+        totalCount: students.length,
+        students: enriched,
+        classDaysThisMonth,
+        hasSelectedDia: !!selectedDia,
+        onAvisar: () => this.avisarTurno(t),
+      };
+      const espera = this.getWaitlist(t.id);
+      esperaList = espera.map(s => ({ id: s.id, name: s.name, onAdmitir: () => this.togglePlaza(s.id) }));
+      hasEspera = espera.length > 0;
+      if (st.avisoTurno && st.avisoTurno.turnoId === t.id) {
+        avisoLinks = this.getStudentsForTurno(t.id).map(s => ({
+          name: s.name,
+          href: `https://wa.me/${(s.phone || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(st.avisoTurno.texto)}`,
+        }));
+        hasAvisoLinks = avisoLinks.length > 0;
+      }
+    }
+
+    let currentStudent = null;
+    if (isProfile) {
+      const s = this.getStudent(view.id);
+      const t = this.getTurno(s.turnoId);
+      const grupo = this.getGrupo(s);
+      const gs = GRUPO_STYLE[grupo];
+      const estado = this.getPagoEstado(s);
+      const ps = PAGO_STYLE[estado];
+      const idx = allStudents.findIndex(x => x.id === s.id);
+      const pattern = ASSIST_PATTERNS[((idx % 4) + 4) % 4] || ASSIST_PATTERNS[0];
+      const dotColors = { presente: 'var(--color-accent-2-600)', justificada: 'var(--color-accent-500)', ausente: 'var(--color-neutral-400)' };
+      currentStudent = {
+        id: s.id, name: s.name, age: s.age, initials: initials(s.name),
+        showAge: grupo !== 'adultos',
+        avatarBg: gs.avatarBg, avatarColor: gs.color,
+        grupoLabel: GRUPO_LABEL[grupo], grupoBg: gs.bg, grupoColor: gs.color,
+        turnoInfo: t ? `${t.day} · ${t.start}–${t.end} · Turno de ${periodFor(t.start)}` : 'Sin turno asignado',
+        telHref: 'tel:' + s.phone.replace(/[\s-]/g, ''),
+        asistLabel: `${pattern.presentes}/${pattern.total}`,
+        ultimas: pattern.ultimas.map(u => ({ color: dotColors[u] })),
+        pagoLabel: ps.label, pagoBg: ps.bg, pagoColor: ps.color,
+        historial: this.getHistorial(s).map(h => ({ mes: h.mes, metodo: h.metodo, montoLabel: fmtMoney(h.monto) })),
+        onRegistrarPago: () => this.openPagoSheet(s.id),
+        onEditar: () => this.openEditAlumno(s),
+        onEliminar: () => this.deleteAlumno(s.id),
+        onTransferir: () => this.openTransferir(s),
+        onToggleActivo: () => this.toggleActivo(s.id),
+        activoLabel: s.activo === false ? 'Reactivar' : 'Dar de baja',
+        esBaja: s.activo === false,
+        enEspera: !!s.enEspera,
+        nivel: s.nivel || '', emergencia: s.emergencia || '', notas: s.notas || '',
+        hasNivel: !!s.nivel, hasEmergencia: !!s.emergencia, hasNotas: !!s.notas,
+        hasFicha: !!(s.nivel || s.emergencia || s.notas),
+        showRecordatorio: estado === 'pendiente' || estado === 'atrasado',
+        recordatorioHref: this.buildRecordatorio(s),
+      };
+      const asistPerfil = this.countAsistenciaMes(s, st.selectedMesPerfil);
+      currentStudent.asistResumen = asistPerfil ? `${asistPerfil.presentes}/${asistPerfil.total} clases` : 'Sin turno asignado';
+      if (t) {
+        const activeBg = 'var(--color-accent-700)', activeColor = 'var(--color-bg)';
+        const idleBg = 'var(--color-surface)', idleColor = 'var(--color-neutral-600)';
+        const days = classDaysForTurnoInMonth(t, st.selectedMesPerfil, st.closedDates).slice(-6);
+        currentStudent.diasAsistencia = days.map(({ key, day }) => {
+          const marks = st.attendance[`${t.id}::${key}`] || {};
+          const status = marks[s.id];
+          return {
+            label: `${day} ${st.selectedMesPerfil.split(' ')[0].slice(0, 3)}`,
+            presenteBg: status === 'presente' ? activeBg : idleBg, presenteColor: status === 'presente' ? activeColor : idleColor,
+            justificadaBg: status === 'justificada' ? activeBg : idleBg, justificadaColor: status === 'justificada' ? activeColor : idleColor,
+            ausenteBg: status === 'ausente' ? activeBg : idleBg, ausenteColor: status === 'ausente' ? activeColor : idleColor,
+            onPresente: () => this.markAttendance(t.id, key, s.id, 'presente'),
+            onJustificada: () => this.markAttendance(t.id, key, s.id, 'justificada'),
+            onAusente: () => this.markAttendance(t.id, key, s.id, 'ausente'),
+          };
+        });
+      } else {
+        currentStudent.diasAsistencia = [];
+      }
+    }
+
+    let headerTitle = '', headerSubtitle = '';
+    if (isAttendance) { headerTitle = 'Asistencia'; headerSubtitle = `${currentTurno.grupoLabel} · ${currentTurno.day}`; }
+    else if (isProfile) { headerTitle = currentStudent.name; headerSubtitle = currentStudent.grupoLabel; }
+    else if (isCalendar) { headerTitle = 'Calendario'; headerSubtitle = 'Días de cierre de la academia'; }
+    else if (isHoy) { headerTitle = 'Arte Chromo'; headerSubtitle = `Hoy es ${TODAY_LABEL}`; }
+    else if (isTurnos) { headerTitle = 'Turnos'; headerSubtitle = 'Tu semana completa'; }
+    else if (isAlumnos) { headerTitle = 'Alumnos'; headerSubtitle = `${students.length} en la academia`; }
+    else if (isPagos) { headerTitle = 'Pagos'; headerSubtitle = 'Cuotas y cobros del mes'; }
+    else if (isReportes) { headerTitle = 'Estadísticas'; headerSubtitle = 'Asistencia e ingresos'; }
+    else if (isCurso) { headerTitle = 'Curso'; headerSubtitle = 'Selección del curso escolar'; }
+
+    const tabActiveColor = 'var(--color-accent-700)', tabActiveBg = 'var(--color-accent-100)';
+    const cloudDotColor = st.cloudOnline ? 'var(--color-accent-2-600)' : 'var(--color-neutral-400)';
+    const cloudLabel = st.cloudOnline ? 'Sincronizado' : 'Sin conexión — se guardará al volver';
+    const tabIdleColor = 'var(--color-neutral-500)', tabIdleBg = 'transparent';
+
+    const sheetType = st.sheet ? st.sheet.type : null;
+    const sheetOpenPago = sheetType === 'pago';
+    const sheetOpenTurno = sheetType === 'turno';
+    const sheetOpenAlumno = sheetType === 'alumno';
+    const sheetOpenTransferir = sheetType === 'transferir';
+    let sheetStudentName = '';
+    if (sheetOpenPago) sheetStudentName = this.getStudent(st.sheet.studentId).name;
+
+    const diaOptions = DIAS_ORDEN;
+    const grupoOptions = GRUPO_OPTIONS;
+    const turnoOptions = turnos.map(t => ({ id: t.id, label: `${t.day} ${t.start}–${t.end} · ${GRUPO_LABEL[t.grupo]}` }));
+    const hasTurnoOptions = turnoOptions.length > 0;
+    const turnoForm = st.turnoForm ? { ...st.turnoForm, isEditing: !!st.turnoForm.id, dialogTitle: st.turnoForm.id ? 'Editar turno' : 'Nuevo turno' } : { day: 'Lunes', grupo: 'niños', start: '', end: '', isEditing: false, dialogTitle: 'Nuevo turno' };
+    const alumnoFormBase = st.alumnoForm || { name: '', age: '', grupo: 'niños', turnoId: '', phone: '', monto: CUOTAS['niños'] };
+    const alumnoForm = { ...alumnoFormBase, isEditing: !!alumnoFormBase.id, dialogTitle: alumnoFormBase.id ? 'Editar alumno' : 'Nuevo alumno', showAge: alumnoFormBase.grupo !== 'adultos' };
+
+    const headerActionVisible = isTurnos || isAlumnos;
+    const headerActionOnClick = isTurnos ? this.openNewTurno : (isAlumnos ? this.openNewAlumno : () => {});
+    const headerCalendarVisible = isTurnos;
+
+    const calMeta = mesMeta(st.selectedMesCalendario);
+    const calYear = calMeta ? calMeta.year : 2026;
+    const calMonthNum = calMeta ? calMeta.month : 0;
+    const calDaysInMonth = new Date(calYear, calMonthNum + 1, 0).getDate();
+    const calFirstDow = (new Date(calYear, calMonthNum, 1).getDay() + 6) % 7;
+    const calendarCells = [];
+    for (let i = 0; i < calFirstDow; i++) calendarCells.push({ label: '', visibility: 'hidden', cursor: 'default', bg: 'transparent', color: 'transparent', onClick: () => {} });
+    for (let d = 1; d <= calDaysInMonth; d++) {
+      const key = `${calYear}-${pad2(calMonthNum + 1)}-${pad2(d)}`;
+      const closed = !!st.closedDates[key];
+      calendarCells.push({
+        label: d, visibility: 'visible', cursor: 'pointer',
+        bg: closed ? 'var(--color-accent-700)' : 'var(--color-surface)',
+        color: closed ? 'var(--color-bg)' : 'var(--color-text)',
+        onClick: () => this.toggleClosedDate(key),
+      });
+    }
+    const closedCountLabel = `${Object.keys(st.closedDates).filter(k => k.startsWith(`${calYear}-${pad2(calMonthNum + 1)}`)).length} día(s) de cierre este mes.`;
+
+    const clasesPorTurnoMes = turnos.map(t => ({
+      grupoLabel: GRUPO_LABEL[t.grupo], bg: GRUPO_STYLE[t.grupo].bg, color: GRUPO_STYLE[t.grupo].color,
+      day: t.day, time: `${t.start}–${t.end}`, count: classDaysForTurnoInMonth(t, st.selectedMesCalendario, st.closedDates).length,
+    })).sort((a, b) => DIAS_ORDEN.indexOf(a.day) - DIAS_ORDEN.indexOf(b.day));
+
+    return {
+      showBack, goBack: this.goBack, headerTitle, headerSubtitle,
+      headerActionVisible, headerActionOnClick, headerCalendarVisible, openCalendar: this.openCalendar,
+      isHoy, isTurnos, isAlumnos, isPagos, isReportes, isCurso, isAttendance, isProfile, isCalendar, isTabView,
+      selectedCurso: CURSO_LABEL, cursoOptions: [CURSO_LABEL], onCursoChange: () => {},
+      cursoBoundsList: Object.keys(COURSE_BOUNDS).map(g => ({
+        label: GRUPO_LABEL[g], bg: GRUPO_STYLE[g].bg, color: GRUPO_STYLE[g].color,
+        startLabel: COURSE_BOUNDS[g].start.split('-').reverse().join('/'),
+        endLabel: COURSE_BOUNDS[g].end.split('-').reverse().join('/'),
+      })),
+      calendarCells, closedCountLabel, clasesPorTurnoMes, selectedMesCalendario: st.selectedMesCalendario, onMesCalendarioChange: this.onMesCalendarioChange,
+      hasTurnosHoy, noTurnosHoy, todayTurnos, turnosByDay, hasMorosos, morosos, morososList,
+      morososExpanded: st.morososExpanded, toggleMorosos: this.toggleMorosos,
+      morososToggleLabel: st.morososExpanded ? 'Ocultar' : 'Ver listado',
+      searchQueryTurnos: st.searchQueryTurnos, onSearchTurnosChange: this.onSearchTurnosChange,
+      searchQuery: st.searchQuery, onSearchChange: this.onSearchChange, filterChips,
+      selectedMesPerfil: st.selectedMesPerfil, onMesAlumnosChange: this.onMesAlumnosChange,
+      mesOptionsPerfil: MESES.map(m => ({ value: m, selected: m === st.selectedMesPerfil })),
+      hasStudentsResults, noStudentsResults, filteredStudents,
+      pagosStats, hasAtrasados, hasPendientes, pagosAtrasados, pagosPendientes, pagosPorGrupo, hasPagosGrupos,
+      hasPendientesTotal, pendientesTotalCount, pendientesTotalList,
+      recordatoriosListaExpanded: st.recordatoriosListaExpanded, toggleRecordatoriosLista: this.toggleRecordatoriosLista,
+      asistenciaPorGrupo, alumnosPorGrupo, ingresosMesLabel, alumnosTotal,
+      currentTurno, currentStudent,
+      goHoy: this.goHoy, goTurnos: this.goTurnos, goAlumnos: this.goAlumnos, goPagos: this.goPagos, goReportes: this.goReportes, goCurso: this.goCurso,
+      tabCursoColor: isCurso ? tabActiveColor : tabIdleColor, tabCursoBg: isCurso ? tabActiveBg : tabIdleBg,
+      tabHoyColor: isHoy ? tabActiveColor : tabIdleColor, tabHoyBg: isHoy ? tabActiveBg : tabIdleBg,
+      tabTurnosColor: isTurnos ? tabActiveColor : tabIdleColor, tabTurnosBg: isTurnos ? tabActiveBg : tabIdleBg,
+      tabAlumnosColor: isAlumnos ? tabActiveColor : tabIdleColor, tabAlumnosBg: isAlumnos ? tabActiveBg : tabIdleBg,
+      tabPagosColor: isPagos ? tabActiveColor : tabIdleColor, tabPagosBg: isPagos ? tabActiveBg : tabIdleBg,
+      tabReportesColor: isReportes ? tabActiveColor : tabIdleColor, tabReportesBg: isReportes ? tabActiveBg : tabIdleBg,
+      sheetOpenPago, sheetOpenTurno, sheetOpenAlumno, sheetStudentName,
+      pagoMes: st.pagoForm.mes, onPagoMesChange: this.onPagoMesChange,
+      pagoMonto: st.pagoForm.monto, onPagoMontoChange: this.onPagoMontoChange,
+      metodoEfectivoChecked: st.pagoForm.metodo === 'efectivo', metodoTransfChecked: st.pagoForm.metodo === 'transferencia',
+      metodoBizumChecked: st.pagoForm.metodo === 'bizum', metodoTpvChecked: st.pagoForm.metodo === 'tpv',
+      setMetodoEfectivo: this.setMetodoEfectivo, setMetodoTransf: this.setMetodoTransf,
+      setMetodoBizum: this.setMetodoBizum, setMetodoTpv: this.setMetodoTpv,
+      closeSheet: () => this.setState({ sheet: null }), confirmPago: this.confirmPago,
+      marcarTodosPresentes: this.marcarTodosPresentes,
+      esperaList, hasEspera, avisoLinks, hasAvisoLinks, cerrarAviso: this.cerrarAviso,
+      cloudDotColor, cloudLabel,
+      onTurnoCupoChange: this.onTurnoCupoChange,
+      onAlumnoNivelChange: this.onAlumnoNivelChange, onAlumnoEmergenciaChange: this.onAlumnoEmergenciaChange, onAlumnoNotasChange: this.onAlumnoNotasChange,
+      sheetOpenTransferir, transferForm: sheetOpenTransferir ? { ...(st.transferForm || { turnoId: '' }), studentName: this.getStudent(st.sheet.studentId).name } : { turnoId: '', studentName: '' }, onTransferTurnoChange: this.onTransferTurnoChange, confirmTransfer: this.confirmTransfer,
+      diaOptions, grupoOptions, turnoOptions, hasTurnoOptions, turnoForm, alumnoForm,
+      onTurnoDayChange: this.onTurnoDayChange, onTurnoGrupoChange: this.onTurnoGrupoChange,
+      onTurnoStartChange: this.onTurnoStartChange, onTurnoEndChange: this.onTurnoEndChange,
+      saveTurno: this.saveTurno, deleteTurno: this.deleteTurno,
+      onAlumnoNameChange: this.onAlumnoNameChange, onAlumnoAgeChange: this.onAlumnoAgeChange,
+      onAlumnoTurnoChange: this.onAlumnoTurnoChange, onAlumnoPhoneChange: this.onAlumnoPhoneChange, onAlumnoMontoChange: this.onAlumnoMontoChange, onAlumnoGrupoChange: this.onAlumnoGrupoChange, onAlumnoFechaInicioChange: this.onAlumnoFechaInicioChange,
+      saveAlumno: this.saveAlumno, deleteAlumno: this.deleteAlumno,
+      mesOptions: MESES, selectedMesPagos: st.selectedMesPagos, onMesPagosChange: this.onMesPagosChange, onMesAsistenciaChange: this.onMesAsistenciaChange,
+      cursoLabel: CURSO_LABEL,
+      mesOptionsPagos: MESES.map(m => ({ value: m, selected: m === st.selectedMesPagos })),
+      mesOptionsEstadisticas: MESES.map(m => ({ value: m, selected: m === st.selectedMesEstadisticas })),
+      mesOptionsAsistencia: MESES.map(m => ({ value: m, selected: isAttendance && m === currentTurno.mes })),
+      mesOptionsCalendario: MESES.map(m => ({ value: m, selected: m === st.selectedMesCalendario })),
+      hasClassDays: isAttendance && currentTurno.classDaysThisMonth.length > 0,
+      classDaysThisMonth: isAttendance ? currentTurno.classDaysThisMonth : [],
+      hasSelectedDia: isAttendance && currentTurno.hasSelectedDia,
+      hasNoDia: isAttendance && !currentTurno.hasSelectedDia,
+      selectedMesEstadisticas: st.selectedMesEstadisticas, onMesEstadisticasChange: this.onMesEstadisticasChange,
+      isEstadisticasMes, estadisticasScopeChips, ingresosLabelKicker,
+      onExportarDatos: this.onExportarDatos, onImportarDatos: this.onImportarDatos,
+    };
+  }
+}
+</script>
+</body>
+</html>
